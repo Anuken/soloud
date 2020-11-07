@@ -29,7 +29,7 @@ freely, subject to the following restrictions:
 #include "soloud_internal.h"
 #include "soloud_thread.h"
 #include "soloud_fft.h"
-
+#include <algorithm>
 
 #ifdef SOLOUD_SSE_INTRINSICS
 #include <xmmintrin.h>
