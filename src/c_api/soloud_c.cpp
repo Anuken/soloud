@@ -30,7 +30,6 @@ freely, subject to the following restrictions:
 /* SoLoud C-Api Code Generator (c)2013-2020 Jari Komppa http://iki.fi/sol/ */
 
 #include "../include/soloud.h"
-#include "../include/soloud_ay.h"
 #include "../include/soloud_audiosource.h"
 #include "../include/soloud_bassboostfilter.h"
 #include "../include/soloud_biquadresonantfilter.h"
@@ -719,112 +718,6 @@ void Soloud_mixSigned16(void * aClassPtr, short * aBuffer, unsigned int aSamples
 {
 	Soloud * cl = (Soloud *)aClassPtr;
 	cl->mixSigned16(aBuffer, aSamples);
-}
-
-void Ay_destroy(void * aClassPtr)
-{
-  delete (Ay *)aClassPtr;
-}
-
-void * Ay_create()
-{
-  return (void *)new Ay;
-}
-
-void Ay_setVolume(void * aClassPtr, float aVolume)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->setVolume(aVolume);
-}
-
-void Ay_setLooping(void * aClassPtr, int aLoop)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->setLooping(!!aLoop);
-}
-
-void Ay_setAutoStop(void * aClassPtr, int aAutoStop)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->setAutoStop(!!aAutoStop);
-}
-
-void Ay_set3dMinMaxDistance(void * aClassPtr, float aMinDistance, float aMaxDistance)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dMinMaxDistance(aMinDistance, aMaxDistance);
-}
-
-void Ay_set3dAttenuation(void * aClassPtr, unsigned int aAttenuationModel, float aAttenuationRolloffFactor)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dAttenuation(aAttenuationModel, aAttenuationRolloffFactor);
-}
-
-void Ay_set3dDopplerFactor(void * aClassPtr, float aDopplerFactor)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dDopplerFactor(aDopplerFactor);
-}
-
-void Ay_set3dListenerRelative(void * aClassPtr, int aListenerRelative)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dListenerRelative(!!aListenerRelative);
-}
-
-void Ay_set3dDistanceDelay(void * aClassPtr, int aDistanceDelay)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dDistanceDelay(!!aDistanceDelay);
-}
-
-void Ay_set3dCollider(void * aClassPtr, AudioCollider * aCollider)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dCollider(aCollider);
-}
-
-void Ay_set3dColliderEx(void * aClassPtr, AudioCollider * aCollider, int aUserData)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dCollider(aCollider, aUserData);
-}
-
-void Ay_set3dAttenuator(void * aClassPtr, AudioAttenuator * aAttenuator)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->set3dAttenuator(aAttenuator);
-}
-
-void Ay_setInaudibleBehavior(void * aClassPtr, int aMustTick, int aKill)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->setInaudibleBehavior(!!aMustTick, !!aKill);
-}
-
-void Ay_setLoopPoint(void * aClassPtr, double aLoopPoint)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->setLoopPoint(aLoopPoint);
-}
-
-double Ay_getLoopPoint(void * aClassPtr)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	return cl->getLoopPoint();
-}
-
-void Ay_setFilter(void * aClassPtr, unsigned int aFilterId, Filter * aFilter)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->setFilter(aFilterId, aFilter);
-}
-
-void Ay_stop(void * aClassPtr)
-{
-	Ay * cl = (Ay *)aClassPtr;
-	cl->stop();
 }
 
 void BassboostFilter_destroy(void * aClassPtr)
