@@ -189,8 +189,8 @@ namespace SoLoud
 
 	void Soloud::deinit()
 	{
-		SOLOUD_ASSERT(!mInsideAudioThreadMutex);
 		stopAll();
+		SOLOUD_ASSERT(!mInsideAudioThreadMutex);
 		if (mBackendCleanupFunc)
 			mBackendCleanupFunc(this);
 		mBackendCleanupFunc = 0;
