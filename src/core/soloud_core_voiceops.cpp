@@ -115,7 +115,8 @@ namespace SoLoud
 
 	void Soloud::stopVoice_internal(unsigned int aVoice)
 	{
-		SOLOUD_ASSERT(aVoice < VOICE_COUNT);
+	  //just ignore invalid voices
+	  if(aVoice >= VOICE_COUNT) return;
 		SOLOUD_ASSERT(mInsideAudioThreadMutex);
 		mActiveVoiceDirty = true;
 		if (mVoice[aVoice])
