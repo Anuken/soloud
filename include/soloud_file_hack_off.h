@@ -26,6 +26,8 @@ freely, subject to the following restrictions:
 See soloud_file_hack_on.h
 */
 
+#if false
+
 #undef FILE  
 #undef fgetc 
 #undef fread 
@@ -34,3 +36,5 @@ See soloud_file_hack_on.h
 #undef fclose
 #undef fopen 
 #undef fopen_s
+
+#endif

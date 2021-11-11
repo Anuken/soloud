@@ -28,6 +28,8 @@ of stdio FILE* stuff.
 You can use soloud_file_hack_off.h to undef the stuff defined here.
 */
 
+
+
 #ifndef SEEK_SET
 #error soloud_file_hack_on must be included after stdio, otherwise the #define hacks will break stdio.
 #endif

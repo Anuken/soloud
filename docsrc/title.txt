@@ -1,2 +1,0 @@
-% SoLoud Audio Engine
-% Jari Komppa
