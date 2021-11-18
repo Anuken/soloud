@@ -23,6 +23,7 @@ freely, subject to the following restrictions:
 */
 
 //ogg-only version of soloud_wavstream
+#if SOLOUD_OGG_ONLY
 
 #include <string.h>
 #include <stdio.h>
@@ -159,6 +160,19 @@ namespace SoLoud
 			
 		
 		return aSamplesToRead;
+	}
+
+	result WavStreamInstance::seek(double aSeconds, float* mScratch, unsigned int mScratchSize)
+	{
+		int pos = (int)floor(mBaseSamplerate * aSeconds);
+		stb_vorbis_seek(mCodec.mOgg, pos);
+		// Since the position that we just sought to might not be *exactly*
+		// the position we asked for, we're re-calculating the position just
+		// for the sake of correctness.
+		mOffset = stb_vorbis_get_sample_offset(mCodec.mOgg);
+		double newPosition = float(mOffset / mBaseSamplerate);
+		mStreamPosition = newPosition;
+		return 0;
 	}
 
 	result WavStreamInstance::rewind()
@@ -375,3 +389,5 @@ namespace SoLoud
 		return mSampleCount / mBaseSamplerate;
 	}
 };
+
+#endif

@@ -191,6 +191,8 @@ namespace SoLoud
 
 	void Soloud::deinit()
 	{
+		lockAudioMutex_internal();
+		unlockAudioMutex_internal();
 		stopAll();
 		SOLOUD_ASSERT(!mInsideAudioThreadMutex);
 		if (mBackendCleanupFunc)

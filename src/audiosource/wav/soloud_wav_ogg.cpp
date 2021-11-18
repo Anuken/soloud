@@ -22,6 +22,9 @@ freely, subject to the following restrictions:
    distribution.
 */
 
+//ogg-only version of soloud_wav
+#if SOLOUD_OGG_ONLY
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -253,3 +256,5 @@ namespace SoLoud
 		return SO_NO_ERROR;
 	}
 };
+
+#endif
