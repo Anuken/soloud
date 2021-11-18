@@ -182,7 +182,7 @@ namespace SoLoud
 	{
 		drmp3 decoder;
 
-		if (!drmp3_init_memory(&decoder, aReader->getMemPtr(), aReader->length(), NULL, NULL))
+		if (!drmp3_init_memory(&decoder, aReader->getMemPtr(), aReader->length(), NULL))
 		{
 			return FILE_LOAD_FAILED;
 		}
