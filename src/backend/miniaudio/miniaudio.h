@@ -45059,6 +45059,8 @@ MA_API ma_result ma_audio_buffer_get_available_frames(const ma_audio_buffer* pAu
 VFS
 
 **************************************************************************************************************************************************************/
+#ifdef MA_USE_VFS
+
 MA_API ma_result ma_vfs_open(ma_vfs* pVFS, const char* pFilePath, ma_uint32 openMode, ma_vfs_file* pFile)
 {
     ma_vfs_callbacks* pCallbacks = (ma_vfs_callbacks*)pVFS;
@@ -45974,7 +45976,7 @@ MA_API ma_result ma_vfs_or_default_info(ma_vfs* pVFS, ma_vfs_file file, ma_file_
     }
 }
 
-
+#endif
 
 /**************************************************************************************************************************************************************
 
