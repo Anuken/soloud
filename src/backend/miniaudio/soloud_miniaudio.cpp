@@ -39,7 +39,7 @@ namespace SoLoud
 
 #define MINIAUDIO_IMPLEMENTATION
 #define MA_NO_NULL
-#define MA_NO_WAV
+#define MA_NO_GENERATION
 #define MA_NO_DECODING
 #define MA_NO_WAV
 #define MA_NO_FLAC
