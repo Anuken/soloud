@@ -62609,82 +62609,6 @@ MA_API ma_result ma_encoder_init__internal(ma_encoder_write_proc onWrite, ma_enc
     return result;
 }
 
-static ma_result ma_encoder__on_write_vfs(ma_encoder* pEncoder, const void* pBufferIn, size_t bytesToWrite, size_t* pBytesWritten)
-{
-    return ma_vfs_or_default_write(pEncoder->data.vfs.pVFS, pEncoder->data.vfs.file, pBufferIn, bytesToWrite, pBytesWritten);
-}
-
-static ma_result ma_encoder__on_seek_vfs(ma_encoder* pEncoder, ma_int64 offset, ma_seek_origin origin)
-{
-    return ma_vfs_or_default_seek(pEncoder->data.vfs.pVFS, pEncoder->data.vfs.file, offset, origin);
-}
-
-MA_API ma_result ma_encoder_init_vfs(ma_vfs* pVFS, const char* pFilePath, const ma_encoder_config* pConfig, ma_encoder* pEncoder)
-{
-    ma_result result;
-    ma_vfs_file file;
-
-    result = ma_encoder_preinit(pConfig, pEncoder);
-    if (result != MA_SUCCESS) {
-        return result;
-    }
-
-    /* Now open the file. If this fails we don't need to uninitialize the encoder. */
-    result = ma_vfs_or_default_open(pVFS, pFilePath, MA_OPEN_MODE_WRITE, &file);
-    if (result != MA_SUCCESS) {
-        return result;
-    }
-
-    pEncoder->data.vfs.pVFS = pVFS;
-    pEncoder->data.vfs.file = file;
-
-    result = ma_encoder_init__internal(ma_encoder__on_write_vfs, ma_encoder__on_seek_vfs, NULL, pEncoder);
-    if (result != MA_SUCCESS) {
-        ma_vfs_or_default_close(pVFS, file);
-        return result;
-    }
-
-    return MA_SUCCESS;
-}
-
-MA_API ma_result ma_encoder_init_vfs_w(ma_vfs* pVFS, const wchar_t* pFilePath, const ma_encoder_config* pConfig, ma_encoder* pEncoder)
-{
-    ma_result result;
-    ma_vfs_file file;
-
-    result = ma_encoder_preinit(pConfig, pEncoder);
-    if (result != MA_SUCCESS) {
-        return result;
-    }
-
-    /* Now open the file. If this fails we don't need to uninitialize the encoder. */
-    result = ma_vfs_or_default_open_w(pVFS, pFilePath, MA_OPEN_MODE_WRITE, &file);
-    if (result != MA_SUCCESS) {
-        return result;
-    }
-
-    pEncoder->data.vfs.pVFS = pVFS;
-    pEncoder->data.vfs.file = file;
-
-    result = ma_encoder_init__internal(ma_encoder__on_write_vfs, ma_encoder__on_seek_vfs, NULL, pEncoder);
-    if (result != MA_SUCCESS) {
-        ma_vfs_or_default_close(pVFS, file);
-        return result;
-    }
-
-    return MA_SUCCESS;
-}
-
-MA_API ma_result ma_encoder_init_file(const char* pFilePath, const ma_encoder_config* pConfig, ma_encoder* pEncoder)
-{
-    return ma_encoder_init_vfs(NULL, pFilePath, pConfig, pEncoder);
-}
-
-MA_API ma_result ma_encoder_init_file_w(const wchar_t* pFilePath, const ma_encoder_config* pConfig, ma_encoder* pEncoder)
-{
-    return ma_encoder_init_vfs_w(NULL, pFilePath, pConfig, pEncoder);
-}
-
 MA_API ma_result ma_encoder_init(ma_encoder_write_proc onWrite, ma_encoder_seek_proc onSeek, void* pUserData, const ma_encoder_config* pConfig, ma_encoder* pEncoder)
 {
     ma_result result;
@@ -62706,12 +62630,6 @@ MA_API void ma_encoder_uninit(ma_encoder* pEncoder)
 
     if (pEncoder->onUninit) {
         pEncoder->onUninit(pEncoder);
-    }
-
-    /* If we have a file handle, close it. */
-    if (pEncoder->onWrite == ma_encoder__on_write_vfs) {
-        ma_vfs_or_default_close(pEncoder->data.vfs.pVFS, pEncoder->data.vfs.file);
-        pEncoder->data.vfs.file = NULL;
     }
 }
 
