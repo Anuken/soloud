@@ -29,7 +29,6 @@ freely, subject to the following restrictions:
 #include "soloud_internal.h"
 #include "soloud_thread.h"
 #include "soloud_fft.h"
-#include <algorithm>
 
 #ifdef SOLOUD_SSE_INTRINSICS
 #include <xmmintrin.h>
@@ -1961,6 +1960,21 @@ namespace SoLoud
 			}
 		}
 	}
+	
+	//needed for sort callback
+	Soloud* sortGlobal;
+
+	int voicecmp(const void * ap, const void * bp){
+		unsigned int a = *(unsigned int*)ap;
+		unsigned int b = *(unsigned int*)bp;
+
+		// Test a>b
+		if((sortGlobal->mVoice[a]->mFlags & AudioSourceInstance::PROTECTED) && !(sortGlobal->mVoice[b]->mFlags & AudioSourceInstance::PROTECTED))
+			return true;
+		if((sortGlobal->mVoice[b]->mFlags & AudioSourceInstance::PROTECTED) && !(sortGlobal->mVoice[a]->mFlags & AudioSourceInstance::PROTECTED))
+			return false;
+		return sortGlobal->mVoice[a]->mOverallVolume > sortGlobal->mVoice[b]->mOverallVolume;
+	};
 
 	void Soloud::calcActiveVoices_internal()
 	{
@@ -2011,18 +2025,10 @@ namespace SoLoud
 
 		// If we get this far, there's nothing to it: we'll have to sort the voices to find the most audible.
 
-		// Iterative partial quicksort:
-		auto comp = [this](const unsigned int & a, const unsigned int & b)
-		{
-			// Test a>b
-			if((mVoice[a]->mFlags & AudioSourceInstance::PROTECTED) && !(mVoice[b]->mFlags & AudioSourceInstance::PROTECTED))
-				return true;
-			if((mVoice[b]->mFlags & AudioSourceInstance::PROTECTED) && !(mVoice[a]->mFlags & AudioSourceInstance::PROTECTED))
-				return false;
-			return mVoice[a]->mOverallVolume > mVoice[b]->mOverallVolume;
-		};
+		//this is terrible but I see no better solution
+		sortGlobal = this;
+		qsort(&mActiveVoice[0+mustlive], candidates - mustlive, sizeof(unsigned int), voicecmp);
 
-		std::stable_sort(&mActiveVoice[0+mustlive], &mActiveVoice[candidates], comp);	
 		// TODO: should the rest of the voices be flagged INAUDIBLE?
 		mapResampleBuffers_internal();
 	}
