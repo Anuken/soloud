@@ -28,6 +28,11 @@ freely, subject to the following restrictions:
 #include <stdio.h>
 #include "soloud.h"
 
+#ifdef __ANDROID__
+//needed for Android file stuff
+#include <android/asset_manager.h>
+#endif
+
 typedef void* Soloud_Filehack;
 
 namespace SoLoud
@@ -85,6 +90,25 @@ namespace SoLoud
 		result openToMem(const char *aFilename);
 		result openFileToMem(File *aFile);
 	};
+
+	#ifdef __ANDROID__
+	class AndroidFile : public File{
+
+	public:
+		AndroidFile( AAssetManager* AssetManager, const char* FileName );
+		virtual ~AndroidFile();
+		virtual int eof();
+		virtual unsigned int read(unsigned char *aDst, unsigned int aBytes);
+		virtual unsigned int length();
+		virtual void seek(int aOffset);
+		virtual unsigned int pos();
+		AAsset* Asset_;
+	private:
+		unsigned int Position_;
+
+	};
+
+	#endif
 };
 
 #endif

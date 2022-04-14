@@ -242,6 +242,50 @@ mFileHandle(fp)
 			return 1;
 		return 0;
 	}
+
+	#ifdef __ANDROID__
+	AndroidFile::AndroidFile( AAssetManager* AssetManager, const char* FileName )
+	{
+		Asset_ = AAssetManager_open( AssetManager, FileName, AASSET_MODE_UNKNOWN );
+		Position_ = 0;
+	}
+
+	AndroidFile::~AndroidFile()
+	{
+		if( Asset_ )
+		{
+			AAsset_close( Asset_ );
+		}
+	}
+
+	int AndroidFile::eof()
+	{
+		return Position_ >= length();
+	}
+
+	unsigned int AndroidFile::read( unsigned char *aDst, unsigned int aBytes )
+	{
+		AAsset_seek( Asset_, Position_, SEEK_SET );
+		AAsset_read( Asset_, aDst, aBytes );
+		Position_ += aBytes;
+		return aBytes;
+	}
+	
+	unsigned int AndroidFile::length()
+	{
+		return static_cast< unsigned int >( AAsset_getLength( Asset_ ) );
+	}
+
+	void AndroidFile::seek( int aOffset )
+	{
+		Position_ = aOffset;
+	}
+
+	unsigned int AndroidFile::pos()
+	{
+		return Position_;
+	}
+	#endif
 }
 
 extern "C"

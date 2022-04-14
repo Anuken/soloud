@@ -33,6 +33,23 @@ freely, subject to the following restrictions:
 #include "soloud_file.h"
 #include "stb_vorbis.h"
 
+/*
+//on Android, I need access to the asset manager, but that is only provided through glfm
+#ifdef __ANDROID__
+#ifndef SOLOUD_NO_GLFM
+
+#define SOLOUD_USE_ANDROID_ASSETS
+#include <android/asset_manager.h>
+#include <android/log.h>
+#include <glfm.h>
+
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "soloud-android", __VA_ARGS__))
+#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "soloud-android", __VA_ARGS__))
+
+#endif
+#endif
+*/
+
 namespace SoLoud
 {
 
@@ -244,11 +261,28 @@ namespace SoLoud
 		mMemFile = 0;
 		mFilename = 0;
 		mSampleCount = 0;
+
+		int res;
+
+		//it would be nice if this worked, but it doesn't. crash: ftello: FILE* is NULL.
+		/*
+		#ifdef SOLOUD_USE_ANDROID_ASSETS
+
+		AndroidFile fp(glfmAndroidGetActivity()->assetManager, aFilename);
+
+		//can be null when not found for some ungodly reason.
+		if(!fp.Asset_)
+			return FILE_NOT_FOUND;
+
+		#else*/
+
 		DiskFile fp;
-		int res = fp.open(aFilename);
+		res = fp.open(aFilename);
 		if (res != SO_NO_ERROR)
 			return res;
-		
+
+		//#endif
+
 		int len = (int)strlen(aFilename);
 		mFilename = new char[len+1];		
 		memcpy(mFilename, aFilename, len);
