@@ -92,6 +92,7 @@ namespace SoLoud
 	};
 
 	#ifdef __ANDROID__
+	#if false
 	class AndroidFile : public File{
 
 	public:
@@ -107,7 +108,7 @@ namespace SoLoud
 		unsigned int Position_;
 
 	};
-
+	#endif
 	#endif
 };
 

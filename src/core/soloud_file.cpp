@@ -244,6 +244,7 @@ mFileHandle(fp)
 	}
 
 	#ifdef __ANDROID__
+	#if false
 	AndroidFile::AndroidFile( AAssetManager* AssetManager, const char* FileName )
 	{
 		Asset_ = AAssetManager_open( AssetManager, FileName, AASSET_MODE_UNKNOWN );
@@ -285,6 +286,7 @@ mFileHandle(fp)
 	{
 		return Position_;
 	}
+	#endif
 	#endif
 }
 
