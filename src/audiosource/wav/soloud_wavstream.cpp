@@ -90,15 +90,20 @@ namespace SoLoud
 		if (aParent->mMemFile)
 		{
 			MemoryFile *mf = new MemoryFile();
-			mFile = mf;
-			mf->openMem(aParent->mMemFile->getMemPtr(), aParent->mMemFile->length(), false, false);
+			
+			if (mf->openMem(aParent->mMemFile->getMemPtr(), aParent->mMemFile->length(), false, false) == SO_NO_ERROR) {
+				mFile = mf;
+			}
 		}
 		else
 		if (aParent->mFilename)
 		{
 			DiskFile *df = new DiskFile;
-			mFile = df;
-			df->open(aParent->mFilename);
+			
+			//POTENTIAL CRASH FIX: Opening the file stream can fail. Only assign the file if that succeeds.
+			if (df->open(aParent->mFilename) == SO_NO_ERROR) {
+				mFile = df;
+			}
 		}
 		else
 		if (aParent->mStreamFile)

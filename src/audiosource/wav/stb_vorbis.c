@@ -5074,6 +5074,9 @@ stb_vorbis * stb_vorbis_open_file_section(FILE *file, int close_on_free, int *er
 
 stb_vorbis * stb_vorbis_open_file(FILE *file, int close_on_free, int *error, const stb_vorbis_alloc *alloc)
 {
+   //MODIFICATION: Apparently, this can fail sometimes due to a null file. I don't think this will help, but it's worth a try.
+   if (file == NULL) return NULL;
+
    unsigned int len, start;
    start = (unsigned int) ftell(file);
    fseek(file, 0, SEEK_END);

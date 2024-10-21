@@ -325,6 +325,8 @@ extern "C"
 	int Soloud_Filehack_ftell(Soloud_Filehack *f)
 	{
 		SoLoud::File *fp = (SoLoud::File *)f;
+		//MODIFICATION: This is an attempt to fix a null file crash.
+		if(fp == NULL) return -1L;
 		return fp->pos();
 	}
 
