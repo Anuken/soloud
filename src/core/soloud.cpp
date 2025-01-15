@@ -1780,6 +1780,11 @@ namespace SoLoud
 							}
 						}
 					}
+					else
+					{
+						// fix from https://github.com/jarikomppa/soloud/issues/343
+						break;
+					}
 
 					// Keep track of how many samples we've written so far
 					outofs += writesamples;
