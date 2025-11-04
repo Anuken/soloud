@@ -469,7 +469,7 @@ namespace SoLoud
 		// Perform mixing for a specific bus
 		void mixBus_internal(float *aBuffer, unsigned int aSamplesToRead, unsigned int aBufferSize, float *aScratch, unsigned int aBus, float aSamplerate, unsigned int aChannels, unsigned int aResampler);
 		// Find a free voice, stopping the oldest if no free voice is found.
-		int findFreeVoice_internal();
+		int findFreeVoice_internal(float priority);
 		// Converts handle to voice, if the handle is valid. Returns -1 if not.
 		int getVoiceFromHandle_internal(handle aVoiceHandle) const;
 		// Converts voice + playindex into handle

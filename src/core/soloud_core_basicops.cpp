@@ -43,7 +43,7 @@ namespace SoLoud
 		SoLoud::AudioSourceInstance *instance = aSound.createInstance();
 
 		lockAudioMutex_internal();
-		int ch = findFreeVoice_internal();
+		int ch = findFreeVoice_internal(aSound.mPriority);
 		if (ch < 0) 
 		{
 			unlockAudioMutex_internal();

@@ -86,6 +86,7 @@ namespace SoLoud
 		mBusHandle = ~0u;
 		mLoopCount = 0;
 		mLoopPoint = 0;
+		mPriority = 0.0f;
 		for (i = 0; i < FILTERS_PER_STREAM; i++)
 		{
 			mFilter[i] = NULL;
@@ -121,6 +122,7 @@ namespace SoLoud
 		mChannels = aSource.mChannels;
 		mStreamTime = 0.0f;
 		mStreamPosition = 0.0f;
+		mPriority = aSource.mPriority;
 		mLoopPoint = aSource.mLoopPoint;
 
 		if (aSource.mFlags & AudioSource::SHOULD_LOOP)
@@ -213,6 +215,11 @@ namespace SoLoud
 	void AudioSource::setVolume(float aVolume)
 	{
 		mVolume = aVolume;
+	}
+
+	void AudioSource::setPriority(float aPriority)
+	{
+		mPriority = aPriority;
 	}
 
 	void AudioSource::setLoopPoint(time aLoopPoint)

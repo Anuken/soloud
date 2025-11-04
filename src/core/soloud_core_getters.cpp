@@ -306,7 +306,7 @@ namespace SoLoud
 		return v != 0;
 	}
 
-	int Soloud::findFreeVoice_internal()
+	int Soloud::findFreeVoice_internal(float priority)
 	{
 		int i;
 		unsigned int lowest_play_index_value = 0xffffffff;
@@ -327,7 +327,7 @@ namespace SoLoud
 				return i;
 			}
 			if (((mVoice[i]->mFlags & AudioSourceInstance::PROTECTED) == 0) && 
-				mVoice[i]->mPlayIndex < lowest_play_index_value)
+				(mVoice[i]->mPriority <= priority && (mVoice[i]->mPlayIndex < lowest_play_index_value || mVoice[i]->mPriority < priority)))
 			{
 				lowest_play_index_value = mVoice[i]->mPlayIndex;
 				lowest_play_index = i;

@@ -151,6 +151,8 @@ namespace SoLoud
 		float mSetRelativePlaySpeed;
 		// Overall relative plays peed; overall = set * 3d
 		float mOverallRelativePlaySpeed;
+		// Priority of the instance relative to others
+		float mPriority;
 		// How long this stream has played, in seconds.
 		time mStreamTime;
 		// Position of this stream, in seconds.
@@ -245,6 +247,8 @@ namespace SoLoud
 		float mBaseSamplerate;
 		// Default volume for created instances
 		float mVolume;
+		// Priority for sound interruption. Sounds with higher priority interrupt those with lower priorities.
+		float mPriority;
 		// Number of channels this audio source produces
 		unsigned int mChannels;
 		// Sound source ID. Assigned by SoLoud the first time it's played.
@@ -276,6 +280,8 @@ namespace SoLoud
 		AudioSource();
 		// Set default volume for instances
 		void setVolume(float aVolume);
+		// Set default priority for instances
+		void setPriority(float aPriority);
 		// Set the looping of the instances created from this audio source
 		void setLooping(bool aLoop);
 		// Set whether only one instance of this sound should ever be playing at the same time

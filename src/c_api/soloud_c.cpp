@@ -76,6 +76,18 @@ int Soloud_initEx(void * aClassPtr, unsigned int aFlags, unsigned int aBackend, 
 	return cl->init(aFlags, aBackend, aSamplerate, aBufferSize, aChannels);
 }
 
+int Soloud_pause(void * aClassPtr)
+{
+	Soloud * cl = (Soloud *)aClassPtr;
+	return cl->pause();
+}
+
+int Soloud_resume(void * aClassPtr)
+{
+	Soloud * cl = (Soloud *)aClassPtr;
+	return cl->resume();
+}
+
 void Soloud_deinit(void * aClassPtr)
 {
 	Soloud * cl = (Soloud *)aClassPtr;
@@ -928,6 +940,12 @@ void Bus_setVolume(void * aClassPtr, float aVolume)
 	cl->setVolume(aVolume);
 }
 
+void Bus_setPriority(void * aClassPtr, float aPriority)
+{
+	Bus * cl = (Bus *)aClassPtr;
+	cl->setPriority(aPriority);
+}
+
 void Bus_setLooping(void * aClassPtr, int aLoop)
 {
 	Bus * cl = (Bus *)aClassPtr;
@@ -1346,6 +1364,12 @@ void Queue_setVolume(void * aClassPtr, float aVolume)
 	cl->setVolume(aVolume);
 }
 
+void Queue_setPriority(void * aClassPtr, float aPriority)
+{
+	Queue * cl = (Queue *)aClassPtr;
+	cl->setPriority(aPriority);
+}
+
 void Queue_setLooping(void * aClassPtr, int aLoop)
 {
 	Queue * cl = (Queue *)aClassPtr;
@@ -1564,6 +1588,12 @@ void Wav_setVolume(void * aClassPtr, float aVolume)
 	cl->setVolume(aVolume);
 }
 
+void Wav_setPriority(void * aClassPtr, float aPriority)
+{
+	Wav * cl = (Wav *)aClassPtr;
+	cl->setPriority(aPriority);
+}
+
 void Wav_setLooping(void * aClassPtr, int aLoop)
 {
 	Wav * cl = (Wav *)aClassPtr;
@@ -1756,6 +1786,12 @@ void WavStream_setVolume(void * aClassPtr, float aVolume)
 {
 	WavStream * cl = (WavStream *)aClassPtr;
 	cl->setVolume(aVolume);
+}
+
+void WavStream_setPriority(void * aClassPtr, float aPriority)
+{
+	WavStream * cl = (WavStream *)aClassPtr;
+	cl->setPriority(aPriority);
 }
 
 void WavStream_setLooping(void * aClassPtr, int aLoop)

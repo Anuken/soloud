@@ -107,7 +107,6 @@ enum SOLOUD_ENUMS
 typedef void * AlignedFloatBuffer;
 typedef void * TinyAlignedFloatBuffer;
 typedef void * Soloud;
-typedef void * Ay;
 typedef void * AudioCollider;
 typedef void * AudioAttenuator;
 typedef void * AudioSource;
@@ -136,6 +135,8 @@ void Soloud_destroy(Soloud * aSoloud);
 Soloud * Soloud_create();
 int Soloud_init(Soloud * aSoloud);
 int Soloud_initEx(Soloud * aSoloud, unsigned int aFlags /* = Soloud::CLIP_ROUNDOFF */, unsigned int aBackend /* = Soloud::AUTO */, unsigned int aSamplerate /* = Soloud::AUTO */, unsigned int aBufferSize /* = Soloud::AUTO */, unsigned int aChannels /* = 2 */);
+int Soloud_pause(Soloud * aSoloud);
+int Soloud_resume(Soloud * aSoloud);
 void Soloud_deinit(Soloud * aSoloud);
 unsigned int Soloud_getVersion(Soloud * aSoloud);
 const char * Soloud_getErrorString(Soloud * aSoloud, int aErrorCode);
@@ -244,28 +245,6 @@ void Soloud_mix(Soloud * aSoloud, float * aBuffer, unsigned int aSamples);
 void Soloud_mixSigned16(Soloud * aSoloud, short * aBuffer, unsigned int aSamples);
 
 /*
- * Ay
- */
-void Ay_destroy(Ay * aAy);
-Ay * Ay_create();
-void Ay_setVolume(Ay * aAy, float aVolume);
-void Ay_setLooping(Ay * aAy, int aLoop);
-void Ay_setAutoStop(Ay * aAy, int aAutoStop);
-void Ay_set3dMinMaxDistance(Ay * aAy, float aMinDistance, float aMaxDistance);
-void Ay_set3dAttenuation(Ay * aAy, unsigned int aAttenuationModel, float aAttenuationRolloffFactor);
-void Ay_set3dDopplerFactor(Ay * aAy, float aDopplerFactor);
-void Ay_set3dListenerRelative(Ay * aAy, int aListenerRelative);
-void Ay_set3dDistanceDelay(Ay * aAy, int aDistanceDelay);
-void Ay_set3dCollider(Ay * aAy, AudioCollider * aCollider);
-void Ay_set3dColliderEx(Ay * aAy, AudioCollider * aCollider, int aUserData /* = 0 */);
-void Ay_set3dAttenuator(Ay * aAy, AudioAttenuator * aAttenuator);
-void Ay_setInaudibleBehavior(Ay * aAy, int aMustTick, int aKill);
-void Ay_setLoopPoint(Ay * aAy, double aLoopPoint);
-double Ay_getLoopPoint(Ay * aAy);
-void Ay_setFilter(Ay * aAy, unsigned int aFilterId, Filter * aFilter);
-void Ay_stop(Ay * aAy);
-
-/*
  * BassboostFilter
  */
 void BassboostFilter_destroy(BassboostFilter * aBassboostFilter);
@@ -313,6 +292,7 @@ unsigned int Bus_getActiveVoiceCount(Bus * aBus);
 unsigned int Bus_getResampler(Bus * aBus);
 void Bus_setResampler(Bus * aBus, unsigned int aResampler);
 void Bus_setVolume(Bus * aBus, float aVolume);
+void Bus_setPriority(Bus * aBus, float aPriority);
 void Bus_setLooping(Bus * aBus, int aLoop);
 void Bus_setAutoStop(Bus * aBus, int aAutoStop);
 void Bus_set3dMinMaxDistance(Bus * aBus, float aMinDistance, float aMaxDistance);
@@ -413,6 +393,7 @@ int Queue_setParamsFromAudioSource(Queue * aQueue, AudioSource * aSound);
 int Queue_setParams(Queue * aQueue, float aSamplerate);
 int Queue_setParamsEx(Queue * aQueue, float aSamplerate, unsigned int aChannels /* = 2 */);
 void Queue_setVolume(Queue * aQueue, float aVolume);
+void Queue_setPriority(Queue * aQueue, float aPriority);
 void Queue_setLooping(Queue * aQueue, int aLoop);
 void Queue_setAutoStop(Queue * aQueue, int aAutoStop);
 void Queue_set3dMinMaxDistance(Queue * aQueue, float aMinDistance, float aMaxDistance);
@@ -458,6 +439,7 @@ int Wav_loadRawWave(Wav * aWav, float * aMem, unsigned int aLength);
 int Wav_loadRawWaveEx(Wav * aWav, float * aMem, unsigned int aLength, float aSamplerate /* = 44100.0f */, unsigned int aChannels /* = 1 */, int aCopy /* = false */, int aTakeOwnership /* = true */);
 double Wav_getLength(Wav * aWav);
 void Wav_setVolume(Wav * aWav, float aVolume);
+void Wav_setPriority(Wav * aWav, float aPriority);
 void Wav_setLooping(Wav * aWav, int aLoop);
 void Wav_setAutoStop(Wav * aWav, int aAutoStop);
 void Wav_set3dMinMaxDistance(Wav * aWav, float aMinDistance, float aMaxDistance);
@@ -499,6 +481,7 @@ int WavStream_loadFile(WavStream * aWavStream, File * aFile);
 int WavStream_loadFileToMem(WavStream * aWavStream, File * aFile);
 double WavStream_getLength(WavStream * aWavStream);
 void WavStream_setVolume(WavStream * aWavStream, float aVolume);
+void WavStream_setPriority(WavStream * aWavStream, float aPriority);
 void WavStream_setLooping(WavStream * aWavStream, int aLoop);
 void WavStream_setAutoStop(WavStream * aWavStream, int aAutoStop);
 void WavStream_set3dMinMaxDistance(WavStream * aWavStream, float aMinDistance, float aMaxDistance);
