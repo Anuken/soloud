@@ -43,6 +43,16 @@ namespace SoLoud
 #else
 
 #include <AudioToolbox/AudioToolbox.h>
+#include <TargetConditionals.h>
+
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1
+#define MA_APPLE_MOBILE
+#include <AVFoundation/AVFoundation.h>
+#include <Foundation/Foundation.h>
+#else
+#define MA_APPLE_DESKTOP
+#include <CoreAudio/CoreAudio.h>
+#endif
 
 #define NUM_BUFFERS 2
 
@@ -99,6 +109,31 @@ namespace SoLoud
 		aSoloud->mBackendCleanupFunc = soloud_coreaudio_deinit;
 		aSoloud->mBackendPauseFunc = soloud_coreaudio_pause;
 		aSoloud->mBackendResumeFunc = soloud_coreaudio_resume;
+
+		//set the category to ambient on iOS to prevent interrupting other audio
+		#if defined(MA_APPLE_MOBILE)
+			@autoreleasepool {
+					AVAudioSession* session = [AVAudioSession sharedInstance];
+					[session setCategory:AVAudioSessionCategoryAmbient error:nil];
+					[session setActive:YES error:nil];
+
+					// [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector (routeChange :) name: AVAudioSessionRouteChangeNotification object: nil];
+					[[NSNotificationCenter defaultCenter] addObserverForName: AVAudioSessionInterruptionNotification object: session queue: nil usingBlock: ^ (NSNotification * notification)
+					{
+							int status = [[notification.userInfo valueForKey: AVAudioSessionInterruptionTypeKey] intValue];
+							if (status == AVAudioSessionInterruptionTypeBegan)
+							{
+									aSoloud->pause();
+							}
+							else if (status == AVAudioSessionInterruptionTypeEnded)
+							{
+									[[AVAudioSession sharedInstance] setActive: TRUE error: nil];
+									aSoloud->resume();
+							}
+					}];
+			}
+			
+		#endif
 
 		AudioStreamBasicDescription audioFormat;
 		audioFormat.mSampleRate = aSamplerate;
