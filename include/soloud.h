@@ -258,15 +258,15 @@ namespace SoLoud
 		result getSpeakerPosition(unsigned int aChannel, float &aX, float &aY, float &aZ);
 
 		// Start playing a sound. Returns voice handle, which can be ignored or used to alter the playing sound's parameters. Negative volume means to use default.
-		handle play(AudioSource &aSound, float aVolume = -1.0f, float aPan = 0.0f, bool aPaused = 0, unsigned int aBus = 0);
+		handle play(AudioSource &aSound, float aVolume = -1.0f, float aPan = 0.0f, float aPitch = 1.0f, bool aPaused = 0, bool aLoop = 0, unsigned int aBus = 0);
 		// Start playing a sound delayed in relation to other sounds called via this function. Negative volume means to use default.
-		handle playClocked(time aSoundTime, AudioSource &aSound, float aVolume = -1.0f, float aPan = 0.0f, unsigned int aBus = 0);
+		handle playClocked(time aSoundTime, AudioSource &aSound, float aVolume = -1.0f, float aPan = 0.0f, float aPitch = 1.0f, bool aLoop = 0, unsigned int aBus = 0);
 		// Start playing a 3d audio source
 		handle play3d(AudioSource &aSound, float aPosX, float aPosY, float aPosZ, float aVelX = 0.0f, float aVelY = 0.0f, float aVelZ = 0.0f, float aVolume = 1.0f, bool aPaused = 0, unsigned int aBus = 0);
 		// Start playing a 3d audio source, delayed in relation to other sounds called via this function.
 		handle play3dClocked(time aSoundTime, AudioSource &aSound, float aPosX, float aPosY, float aPosZ, float aVelX = 0.0f, float aVelY = 0.0f, float aVelZ = 0.0f, float aVolume = 1.0f, unsigned int aBus = 0);
 		// Start playing a sound without any panning. It will be played at full volume.
-		handle playBackground(AudioSource &aSound, float aVolume = -1.0f, bool aPaused = 0, unsigned int aBus = 0);
+		handle playBackground(AudioSource &aSound, float aVolume = -1.0f, float aPitch = 1.0f, bool aPaused = 0, bool aLoop = 0, unsigned int aBus = 0);
 
 		// Seek the audio stream to certain point in time. Some streams can't seek backwards. Relative play speed affects time.
 		result seek(handle aVoiceHandle, time aSeconds);
@@ -469,7 +469,7 @@ namespace SoLoud
 		// Perform mixing for a specific bus
 		void mixBus_internal(float *aBuffer, unsigned int aSamplesToRead, unsigned int aBufferSize, float *aScratch, unsigned int aBus, float aSamplerate, unsigned int aChannels, unsigned int aResampler);
 		// Find a free voice, stopping the oldest if no free voice is found.
-		int findFreeVoice_internal(float priority);
+		int findFreeVoice_internal(float priority, unsigned int sourceId, int maxConcurrent, float minConcurrentPlaytime, float volume);
 		// Converts handle to voice, if the handle is valid. Returns -1 if not.
 		int getVoiceFromHandle_internal(handle aVoiceHandle) const;
 		// Converts voice + playindex into handle

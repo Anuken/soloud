@@ -222,6 +222,16 @@ namespace SoLoud
 		mPriority = aPriority;
 	}
 
+	void AudioSource::setMaxConcurrent(int aMaxConcurrent)
+	{
+		mMaxConcurrent = aMaxConcurrent;
+	}
+
+	void AudioSource::setMinConcurrentInterrupt(float aMinConcurrentInterrupt)
+	{
+		mMinConcurrentInterrupt = aMinConcurrentInterrupt;
+	}
+
 	void AudioSource::setLoopPoint(time aLoopPoint)
 	{
 		mLoopPoint = aLoopPoint;

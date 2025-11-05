@@ -56,7 +56,7 @@ namespace SoLoud
 		// Set filter. Set to NULL to clear the filter.
 		virtual void setFilter(unsigned int aFilterId, Filter *aFilter);
 		// Play sound through the bus
-		handle play(AudioSource &aSound, float aVolume = 1.0f, float aPan = 0.0f, bool aPaused = 0);
+		handle play(AudioSource &aSound, float aVolume = 1.0f, float aPan = 0.0f, float aPitch = 1.0f, bool aPaused = 0, bool aLoop = 0);
 		// Play sound through the bus, delayed in relation to other sounds called via this function.
 		handle playClocked(time aSoundTime, AudioSource &aSound, float aVolume = 1.0f, float aPan = 0.0f);
 		// Start playing a 3d audio source through the bus

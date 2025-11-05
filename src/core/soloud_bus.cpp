@@ -159,7 +159,7 @@ namespace SoLoud
 		}
 	}
 
-	handle Bus::play(AudioSource &aSound, float aVolume, float aPan, bool aPaused)
+	handle Bus::play(AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aPaused, bool aLoop)
 	{
 		if (!mInstance || !mSoloud)
 		{
@@ -172,7 +172,7 @@ namespace SoLoud
 		{
 			return 0;
 		}
-		return mSoloud->play(aSound, aVolume, aPan, aPaused, mChannelHandle);
+		return mSoloud->play(aSound, aVolume, aPan, aPitch, aPaused, aLoop, mChannelHandle);
 	}	
 
 

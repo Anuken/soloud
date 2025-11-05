@@ -249,6 +249,10 @@ namespace SoLoud
 		float mVolume;
 		// Priority for sound interruption. Sounds with higher priority interrupt those with lower priorities.
 		float mPriority;
+		// Maximum amount of instances of this sound that can play. 0 to disable
+		int mMaxConcurrent;
+		// If a sound has not played for this amount of seconds, it will not be cut off when the concurrent limit is reached.
+		float mMinConcurrentInterrupt;
 		// Number of channels this audio source produces
 		unsigned int mChannels;
 		// Sound source ID. Assigned by SoLoud the first time it's played.
@@ -282,6 +286,10 @@ namespace SoLoud
 		void setVolume(float aVolume);
 		// Set default priority for instances
 		void setPriority(float aPriority);
+		// Set the max concurrent instances of this sound
+		void setMaxConcurrent(int aMaxConcurrent);
+		// Set the threshold, in seconds, at which sounds can be interrupted when the concurrent threshold is reached
+		void setMinConcurrentInterrupt(float aMinConcurrentInterrupt);
 		// Set the looping of the instances created from this audio source
 		void setLooping(bool aLoop);
 		// Set whether only one instance of this sound should ever be playing at the same time

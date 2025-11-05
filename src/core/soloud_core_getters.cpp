@@ -306,35 +306,90 @@ namespace SoLoud
 		return v != 0;
 	}
 
-	int Soloud::findFreeVoice_internal(float priority)
-	{
+	int Soloud::findFreeVoice_internal(float priority, unsigned int sourceId, int maxConcurrent, float minConcurrentInterrupt, float volume){
 		int i;
 		unsigned int lowest_play_index_value = 0xffffffff;
-		int lowest_play_index = -1;
+		float lowest_priority = priority;
+		int best_voice = -1;
+		float lowest_volume = volume;
 		
 		// (slowly) drag the highest active voice index down
-		if (mHighestVoice > 0 && mVoice[mHighestVoice - 1] == NULL)
-			mHighestVoice--;
-		
-		for (i = 0; i < VOICE_COUNT; i++)
-		{
-			if (mVoice[i] == NULL)
-			{
-				if (i+1 > (signed)mHighestVoice)
-				{
-					mHighestVoice = i + 1;
+		if(mHighestVoice > 0 && mVoice[mHighestVoice - 1] == NULL) mHighestVoice--;
+
+		//scan all voices to enforce concurrency (TODO: optimize by keeping track of this in the audio source)
+		if(maxConcurrent > 0){
+			int sameCount = 0;
+			int bestSameVoice = -1;
+			unsigned int bestSamePlayIndex = 0xffffffff;
+			float minSameVolume = volume;
+
+			for(i = 0; i < VOICE_COUNT; i++){
+				AudioSourceInstance* inst = mVoice[i];
+				if(inst != NULL && inst->mAudioSourceID == sourceId){
+
+					sameCount ++;
+
+					//find the oldest one to kick out
+					if(((inst->mFlags & AudioSourceInstance::PROTECTED) == 0) && inst->mPlayIndex < bestSamePlayIndex && inst-> mStreamTime >= minConcurrentInterrupt){
+						bestSamePlayIndex = inst->mPlayIndex;
+						bestSameVoice = i;
+					}
 				}
-				return i;
+
+				if(lowest_play_index_value > 0){
+					if(inst == NULL){
+						//an empty slot was found, it doesn't get better than this. note that the loop can't be broken here because there might be other voices capping maxConcurrent
+						lowest_play_index_value = 0;
+						best_voice = i;
+
+						//standard priority calculations - check priority first, then the one with the lowest play index (oldest)
+					}else if(((mVoice[i]->mFlags & AudioSourceInstance::PROTECTED) == 0) && (mVoice[i]->mPriority <= lowest_priority && (mVoice[i]->mPlayIndex < lowest_play_index_value || mVoice[i]->mPriority < lowest_priority))){
+						lowest_priority = mVoice[i]->mPriority;
+						lowest_play_index_value = mVoice[i]->mPlayIndex;
+						best_voice = i;
+					}
+				}
 			}
-			if (((mVoice[i]->mFlags & AudioSourceInstance::PROTECTED) == 0) && 
-				(mVoice[i]->mPriority <= priority && (mVoice[i]->mPlayIndex < lowest_play_index_value || mVoice[i]->mPriority < priority)))
-			{
-				lowest_play_index_value = mVoice[i]->mPlayIndex;
-				lowest_play_index = i;
+
+			//the concurrent limit was reached
+			if(sameCount >= maxConcurrent){
+				//there is a candidate to kick out of the list
+				if(bestSameVoice != -1){
+					stopVoice_internal(bestSameVoice);
+					return bestSameVoice;
+				}
+				//cannot play (there was no lower volume candidate)
+				return -1;
 			}
+
+			if(best_voice != -1 && mVoice[best_voice] != NULL){
+				stopVoice_internal(best_voice);
+			}
+
+			if(best_voice+1 > (signed)mHighestVoice){
+				mHighestVoice = best_voice + 1;
+			}
+
+			return best_voice;
+		}else{
+			for(i = 0; i < VOICE_COUNT; i++){
+				if(mVoice[i] == NULL){
+					if(i+1 > (signed)mHighestVoice){
+						mHighestVoice = i + 1;
+					}
+					return i;
+				}
+
+				if(((mVoice[i]->mFlags & AudioSourceInstance::PROTECTED) == 0) && (mVoice[i]->mPriority <= lowest_priority && (mVoice[i]->mPlayIndex < lowest_play_index_value || mVoice[i]->mPriority < lowest_priority))){
+					lowest_priority = mVoice[i]->mPriority;
+					lowest_play_index_value = mVoice[i]->mPlayIndex;
+					best_voice = i;
+				}
+			}
+			stopVoice_internal(best_voice);
+
+			return best_voice;
 		}
-		stopVoice_internal(lowest_play_index);
-		return lowest_play_index;
 	}
 
 	unsigned int Soloud::getLoopCount(handle aVoiceHandle)

@@ -29,7 +29,7 @@ freely, subject to the following restrictions:
 
 namespace SoLoud
 {
-	handle Soloud::play(AudioSource &aSound, float aVolume, float aPan, bool aPaused, unsigned int aBus)
+	handle Soloud::play(AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aPaused, bool aLoop, unsigned int aBus)
 	{
 		if (aSound.mFlags & AudioSource::SINGLE_INSTANCE)
 		{
@@ -43,12 +43,12 @@ namespace SoLoud
 		SoLoud::AudioSourceInstance *instance = aSound.createInstance();
 
 		lockAudioMutex_internal();
-		int ch = findFreeVoice_internal(aSound.mPriority);
+		int ch = findFreeVoice_internal(aSound.mPriority, aSound.mAudioSourceID, aSound.mMaxConcurrent, aSound.mMinConcurrentInterrupt, aVolume);
 		if (ch < 0) 
 		{
 			unlockAudioMutex_internal();
 			delete instance;
-			return UNKNOWN_ERROR;
+			return 0;
 		}
 		if (!aSound.mAudioSourceID)
 		{
@@ -69,11 +69,10 @@ namespace SoLoud
 			mPlayIndex = 0;
 		}
 
-		if (aPaused)
-		{
-			mVoice[ch]->mFlags |= AudioSourceInstance::PAUSED;
-		}
-
+		if (aPaused) mVoice[ch]->mFlags |= AudioSourceInstance::PAUSED;
+		if (aLoop) mVoice[ch]->mFlags |= AudioSourceInstance::LOOPING;
+		
+		setVoiceRelativePlaySpeed_internal(ch, aPitch);
 		setVoicePan_internal(ch, aPan);
 		if (aVolume < 0)
 		{
@@ -109,9 +108,9 @@ namespace SoLoud
 		return handle;
 	}
 
-	handle Soloud::playClocked(time aSoundTime, AudioSource &aSound, float aVolume, float aPan, unsigned int aBus)
+	handle Soloud::playClocked(time aSoundTime, AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aLoop, unsigned int aBus)
 	{
-		handle h = play(aSound, aVolume, aPan, 1, aBus);
+		handle h = play(aSound, aVolume, aPan, aPitch, 1, aLoop, aBus);
 		lockAudioMutex_internal();
 		// mLastClockedTime is cleared to zero at start of every output buffer
 		time lasttime = mLastClockedTime;
@@ -130,9 +129,9 @@ namespace SoLoud
 		return h;
 	}
 
-	handle Soloud::playBackground(AudioSource &aSound, float aVolume, bool aPaused, unsigned int aBus)
+	handle Soloud::playBackground(AudioSource &aSound, float aVolume, float aPitch, bool aPaused, bool aLoop, unsigned int aBus)
 	{
-		handle h = play(aSound, aVolume, 0.0f, aPaused, aBus);
+		handle h = play(aSound, aVolume, 0.0f, aPitch, aPaused, aLoop, aBus);
 		setPanAbsolute(h, 1.0f, 1.0f);
 		return h;
 	}
