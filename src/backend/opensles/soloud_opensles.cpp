@@ -174,7 +174,7 @@ namespace SoLoud
 		BackendData *data = static_cast<BackendData*>(soloud->mBackendData);
 		if (event & SL_PLAYEVENT_HEADATEND && data->buffersQueued > 0)
 		{
-			data->buffersQueued--;
+			if (data->buffersQueued > 0) data->buffersQueued--;
 		}
 	}
 
