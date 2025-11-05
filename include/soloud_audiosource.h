@@ -175,6 +175,8 @@ namespace SoLoud
 		unsigned int mAudioSourceID;
 		// Handle of the bus this audio instance is playing on. 0 for root.
 		unsigned int mBusHandle;
+		// ID of the group used for concurrent voice caps
+		int mConcurrentGroupId;
 		// Filter pointer
 		FilterInstance *mFilter[FILTERS_PER_STREAM];
 		// Initialize instance. Mostly internal use.
@@ -249,6 +251,8 @@ namespace SoLoud
 		float mVolume;
 		// Priority for sound interruption. Sounds with higher priority interrupt those with lower priorities.
 		float mPriority;
+		// ID of the group used for maxConcurrent calculations. -1 to assign one automatically based on ID
+		int mConcurrentGroup;
 		// Maximum amount of instances of this sound that can play. 0 to disable
 		int mMaxConcurrent;
 		// If a sound has not played for this amount of seconds, it will not be cut off when the concurrent limit is reached.
@@ -286,6 +290,8 @@ namespace SoLoud
 		void setVolume(float aVolume);
 		// Set default priority for instances
 		void setPriority(float aPriority);
+		// Set the group ID for the concurrent cap - if not set, it will be uniquely assigned per-sound
+		void setConcurrentGroup(int aConcurrentGroup);
 		// Set the max concurrent instances of this sound
 		void setMaxConcurrent(int aMaxConcurrent);
 		// Set the threshold, in seconds, at which sounds can be interrupted when the concurrent threshold is reached

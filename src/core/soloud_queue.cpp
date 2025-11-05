@@ -120,6 +120,7 @@ namespace SoLoud
 		if (!aSound.mAudioSourceID)
 		{
 			aSound.mAudioSourceID = mSoloud->mAudioSourceID;
+		
 			mSoloud->mAudioSourceID++;
 		}
 

@@ -43,7 +43,7 @@ namespace SoLoud
 		SoLoud::AudioSourceInstance *instance = aSound.createInstance();
 
 		lockAudioMutex_internal();
-		int ch = findFreeVoice_internal(aSound.mPriority, aSound.mAudioSourceID, aSound.mMaxConcurrent, aSound.mMinConcurrentInterrupt, aVolume);
+		int ch = findFreeVoice_internal(aSound.mPriority, aSound.mConcurrentGroup, aSound.mMaxConcurrent, aSound.mMinConcurrentInterrupt, aVolume);
 		if (ch < 0) 
 		{
 			unlockAudioMutex_internal();
@@ -54,9 +54,15 @@ namespace SoLoud
 		{
 			aSound.mAudioSourceID = mAudioSourceID;
 			mAudioSourceID++;
+
+			//auto-assigned concurrent groups go in the negatives as to not conflict with manually assigned ones
+			if(aSound.mConcurrentGroup == -1){
+				aSound.mConcurrentGroup = -((signed)mAudioSourceID) - 2;
+			}
 		}
 		mVoice[ch] = instance;
 		mVoice[ch]->mAudioSourceID = aSound.mAudioSourceID;
+		mVoice[ch]->mConcurrentGroupId = aSound.mConcurrentGroup;
 		mVoice[ch]->mBusHandle = aBus;
 		mVoice[ch]->init(aSound, mPlayIndex);
 		m3dData[ch].init(aSound);

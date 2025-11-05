@@ -306,7 +306,7 @@ namespace SoLoud
 		return v != 0;
 	}
 
-	int Soloud::findFreeVoice_internal(float priority, unsigned int sourceId, int maxConcurrent, float minConcurrentInterrupt, float volume){
+	int Soloud::findFreeVoice_internal(float priority, int concurrentGroupId, int maxConcurrent, float minConcurrentInterrupt, float volume){
 		int i;
 		unsigned int lowest_play_index_value = 0xffffffff;
 		float lowest_priority = priority;
@@ -325,7 +325,7 @@ namespace SoLoud
 
 			for(i = 0; i < VOICE_COUNT; i++){
 				AudioSourceInstance* inst = mVoice[i];
-				if(inst != NULL && inst->mAudioSourceID == sourceId){
+				if(inst != NULL && inst->mConcurrentGroupId == concurrentGroupId){
 
 					sameCount ++;
 

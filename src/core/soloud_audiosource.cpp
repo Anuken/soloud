@@ -193,6 +193,7 @@ namespace SoLoud
 		mFlags = 0; 
 		mBaseSamplerate = 44100; 
 		mAudioSourceID = 0;
+		mConcurrentGroup = -1;
 		mSoloud = 0;
 		mChannels = 1;
 		m3dMinDistance = 1;
@@ -220,6 +221,11 @@ namespace SoLoud
 	void AudioSource::setPriority(float aPriority)
 	{
 		mPriority = aPriority;
+	}
+
+	void AudioSource::setConcurrentGroup(int aConcurrentGroup)
+	{
+		mConcurrentGroup = aConcurrentGroup;
 	}
 
 	void AudioSource::setMaxConcurrent(int aMaxConcurrent)
