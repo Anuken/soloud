@@ -105,14 +105,15 @@ namespace SoLoud
 		return 0;
 	}
 
-	BusInstance::~BusInstance()
-	{
+	BusInstance::~BusInstance(){
 		Soloud *s = mParent->mSoloud;
-		int i;
-		for (i = 0; i < (signed)s->mHighestVoice; i++)
-		{
-			if (s->mVoice[i] && s->mVoice[i]->mBusHandle == mParent->mChannelHandle)
-			{
+		int channel = mParent->mChannelHandle;
+
+		//if it has a channel handle of 0, it hasn't been initialized yet
+		if(channel == 0) return;
+
+		for(int i = 0; i < (signed)s->mHighestVoice; i++){
+			if(s->mVoice[i] && s->mVoice[i]->mBusHandle == channel){
 				s->stopVoice_internal(i);
 			}
 		}
