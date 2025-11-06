@@ -51,11 +51,10 @@ enum SOLOUD_ENUMS
 	SOLOUD_OPENAL = 10,
 	SOLOUD_COREAUDIO = 11,
 	SOLOUD_OPENSLES = 12,
-	SOLOUD_VITA_HOMEBREW = 13,
-	SOLOUD_MINIAUDIO = 14,
-	SOLOUD_NOSOUND = 15,
-	SOLOUD_NULLDRIVER = 16,
-	SOLOUD_BACKEND_MAX = 17,
+	SOLOUD_MINIAUDIO = 13,
+	SOLOUD_NOSOUND = 14,
+	SOLOUD_NULLDRIVER = 15,
+	SOLOUD_BACKEND_MAX = 16,
 	SOLOUD_CLIP_ROUNDOFF = 1,
 	SOLOUD_ENABLE_VISUALIZATION = 2,
 	SOLOUD_LEFT_HANDED_3D = 4,
@@ -148,15 +147,15 @@ unsigned int Soloud_getBackendBufferSize(Soloud * aSoloud);
 int Soloud_setSpeakerPosition(Soloud * aSoloud, unsigned int aChannel, float aX, float aY, float aZ);
 int Soloud_getSpeakerPosition(Soloud * aSoloud, unsigned int aChannel, float * aX, float * aY, float * aZ);
 unsigned int Soloud_play(Soloud * aSoloud, AudioSource * aSound);
-unsigned int Soloud_playEx(Soloud * aSoloud, AudioSource * aSound, float aVolume /* = -1.0f */, float aPan /* = 0.0f */, int aPaused /* = 0 */, unsigned int aBus /* = 0 */);
+unsigned int Soloud_playEx(Soloud * aSoloud, AudioSource * aSound, float aVolume /* = -1.0f */, float aPan /* = 0.0f */, float aPitch /* = 1.0f */, int aPaused /* = 0 */, int aLoop /* = 0 */, unsigned int aBus /* = 0 */);
 unsigned int Soloud_playClocked(Soloud * aSoloud, double aSoundTime, AudioSource * aSound);
-unsigned int Soloud_playClockedEx(Soloud * aSoloud, double aSoundTime, AudioSource * aSound, float aVolume /* = -1.0f */, float aPan /* = 0.0f */, unsigned int aBus /* = 0 */);
+unsigned int Soloud_playClockedEx(Soloud * aSoloud, double aSoundTime, AudioSource * aSound, float aVolume /* = -1.0f */, float aPan /* = 0.0f */, float aPitch /* = 1.0f */, int aLoop /* = 0 */, unsigned int aBus /* = 0 */);
 unsigned int Soloud_play3d(Soloud * aSoloud, AudioSource * aSound, float aPosX, float aPosY, float aPosZ);
 unsigned int Soloud_play3dEx(Soloud * aSoloud, AudioSource * aSound, float aPosX, float aPosY, float aPosZ, float aVelX /* = 0.0f */, float aVelY /* = 0.0f */, float aVelZ /* = 0.0f */, float aVolume /* = 1.0f */, int aPaused /* = 0 */, unsigned int aBus /* = 0 */);
 unsigned int Soloud_play3dClocked(Soloud * aSoloud, double aSoundTime, AudioSource * aSound, float aPosX, float aPosY, float aPosZ);
 unsigned int Soloud_play3dClockedEx(Soloud * aSoloud, double aSoundTime, AudioSource * aSound, float aPosX, float aPosY, float aPosZ, float aVelX /* = 0.0f */, float aVelY /* = 0.0f */, float aVelZ /* = 0.0f */, float aVolume /* = 1.0f */, unsigned int aBus /* = 0 */);
 unsigned int Soloud_playBackground(Soloud * aSoloud, AudioSource * aSound);
-unsigned int Soloud_playBackgroundEx(Soloud * aSoloud, AudioSource * aSound, float aVolume /* = -1.0f */, int aPaused /* = 0 */, unsigned int aBus /* = 0 */);
+unsigned int Soloud_playBackgroundEx(Soloud * aSoloud, AudioSource * aSound, float aVolume /* = -1.0f */, float aPitch /* = 1.0f */, int aPaused /* = 0 */, int aLoop /* = 0 */, unsigned int aBus /* = 0 */);
 int Soloud_seek(Soloud * aSoloud, unsigned int aVoiceHandle, double aSeconds);
 void Soloud_stop(Soloud * aSoloud, unsigned int aVoiceHandle);
 void Soloud_stopAll(Soloud * aSoloud);
@@ -275,7 +274,7 @@ void Bus_destroy(Bus * aBus);
 Bus * Bus_create();
 void Bus_setFilter(Bus * aBus, unsigned int aFilterId, Filter * aFilter);
 unsigned int Bus_play(Bus * aBus, AudioSource * aSound);
-unsigned int Bus_playEx(Bus * aBus, AudioSource * aSound, float aVolume /* = 1.0f */, float aPan /* = 0.0f */, int aPaused /* = 0 */);
+unsigned int Bus_playEx(Bus * aBus, AudioSource * aSound, float aVolume /* = 1.0f */, float aPan /* = 0.0f */, float aPitch /* = 1.0f */, int aPaused /* = 0 */, int aLoop /* = 0 */);
 unsigned int Bus_playClocked(Bus * aBus, double aSoundTime, AudioSource * aSound);
 unsigned int Bus_playClockedEx(Bus * aBus, double aSoundTime, AudioSource * aSound, float aVolume /* = 1.0f */, float aPan /* = 0.0f */);
 unsigned int Bus_play3d(Bus * aBus, AudioSource * aSound, float aPosX, float aPosY, float aPosZ);
@@ -293,6 +292,9 @@ unsigned int Bus_getResampler(Bus * aBus);
 void Bus_setResampler(Bus * aBus, unsigned int aResampler);
 void Bus_setVolume(Bus * aBus, float aVolume);
 void Bus_setPriority(Bus * aBus, float aPriority);
+void Bus_setConcurrentGroup(Bus * aBus, int aConcurrentGroup);
+void Bus_setMaxConcurrent(Bus * aBus, int aMaxConcurrent);
+void Bus_setMinConcurrentInterrupt(Bus * aBus, float aMinConcurrentInterrupt);
 void Bus_setLooping(Bus * aBus, int aLoop);
 void Bus_setAutoStop(Bus * aBus, int aAutoStop);
 void Bus_set3dMinMaxDistance(Bus * aBus, float aMinDistance, float aMaxDistance);
@@ -394,6 +396,9 @@ int Queue_setParams(Queue * aQueue, float aSamplerate);
 int Queue_setParamsEx(Queue * aQueue, float aSamplerate, unsigned int aChannels /* = 2 */);
 void Queue_setVolume(Queue * aQueue, float aVolume);
 void Queue_setPriority(Queue * aQueue, float aPriority);
+void Queue_setConcurrentGroup(Queue * aQueue, int aConcurrentGroup);
+void Queue_setMaxConcurrent(Queue * aQueue, int aMaxConcurrent);
+void Queue_setMinConcurrentInterrupt(Queue * aQueue, float aMinConcurrentInterrupt);
 void Queue_setLooping(Queue * aQueue, int aLoop);
 void Queue_setAutoStop(Queue * aQueue, int aAutoStop);
 void Queue_set3dMinMaxDistance(Queue * aQueue, float aMinDistance, float aMaxDistance);
@@ -440,6 +445,9 @@ int Wav_loadRawWaveEx(Wav * aWav, float * aMem, unsigned int aLength, float aSam
 double Wav_getLength(Wav * aWav);
 void Wav_setVolume(Wav * aWav, float aVolume);
 void Wav_setPriority(Wav * aWav, float aPriority);
+void Wav_setConcurrentGroup(Wav * aWav, int aConcurrentGroup);
+void Wav_setMaxConcurrent(Wav * aWav, int aMaxConcurrent);
+void Wav_setMinConcurrentInterrupt(Wav * aWav, float aMinConcurrentInterrupt);
 void Wav_setLooping(Wav * aWav, int aLoop);
 void Wav_setAutoStop(Wav * aWav, int aAutoStop);
 void Wav_set3dMinMaxDistance(Wav * aWav, float aMinDistance, float aMaxDistance);
@@ -482,6 +490,9 @@ int WavStream_loadFileToMem(WavStream * aWavStream, File * aFile);
 double WavStream_getLength(WavStream * aWavStream);
 void WavStream_setVolume(WavStream * aWavStream, float aVolume);
 void WavStream_setPriority(WavStream * aWavStream, float aPriority);
+void WavStream_setConcurrentGroup(WavStream * aWavStream, int aConcurrentGroup);
+void WavStream_setMaxConcurrent(WavStream * aWavStream, int aMaxConcurrent);
+void WavStream_setMinConcurrentInterrupt(WavStream * aWavStream, float aMinConcurrentInterrupt);
 void WavStream_setLooping(WavStream * aWavStream, int aLoop);
 void WavStream_setAutoStop(WavStream * aWavStream, int aAutoStop);
 void WavStream_set3dMinMaxDistance(WavStream * aWavStream, float aMinDistance, float aMaxDistance);

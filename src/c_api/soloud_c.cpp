@@ -154,10 +154,10 @@ unsigned int Soloud_play(void * aClassPtr, AudioSource * aSound)
 	return cl->play(*aSound);
 }
 
-unsigned int Soloud_playEx(void * aClassPtr, AudioSource * aSound, float aVolume, float aPan, int aPaused, unsigned int aBus)
+unsigned int Soloud_playEx(void * aClassPtr, AudioSource * aSound, float aVolume, float aPan, float aPitch, int aPaused, int aLoop, unsigned int aBus)
 {
 	Soloud * cl = (Soloud *)aClassPtr;
-	return cl->play(*aSound, aVolume, aPan, !!aPaused, aBus);
+	return cl->play(*aSound, aVolume, aPan, aPitch, !!aPaused, !!aLoop, aBus);
 }
 
 unsigned int Soloud_playClocked(void * aClassPtr, double aSoundTime, AudioSource * aSound)
@@ -166,10 +166,10 @@ unsigned int Soloud_playClocked(void * aClassPtr, double aSoundTime, AudioSource
 	return cl->playClocked(aSoundTime, *aSound);
 }
 
-unsigned int Soloud_playClockedEx(void * aClassPtr, double aSoundTime, AudioSource * aSound, float aVolume, float aPan, unsigned int aBus)
+unsigned int Soloud_playClockedEx(void * aClassPtr, double aSoundTime, AudioSource * aSound, float aVolume, float aPan, float aPitch, int aLoop, unsigned int aBus)
 {
 	Soloud * cl = (Soloud *)aClassPtr;
-	return cl->playClocked(aSoundTime, *aSound, aVolume, aPan, aBus);
+	return cl->playClocked(aSoundTime, *aSound, aVolume, aPan, aPitch, !!aLoop, aBus);
 }
 
 unsigned int Soloud_play3d(void * aClassPtr, AudioSource * aSound, float aPosX, float aPosY, float aPosZ)
@@ -202,10 +202,10 @@ unsigned int Soloud_playBackground(void * aClassPtr, AudioSource * aSound)
 	return cl->playBackground(*aSound);
 }
 
-unsigned int Soloud_playBackgroundEx(void * aClassPtr, AudioSource * aSound, float aVolume, int aPaused, unsigned int aBus)
+unsigned int Soloud_playBackgroundEx(void * aClassPtr, AudioSource * aSound, float aVolume, float aPitch, int aPaused, int aLoop, unsigned int aBus)
 {
 	Soloud * cl = (Soloud *)aClassPtr;
-	return cl->playBackground(*aSound, aVolume, !!aPaused, aBus);
+	return cl->playBackground(*aSound, aVolume, aPitch, !!aPaused, !!aLoop, aBus);
 }
 
 int Soloud_seek(void * aClassPtr, unsigned int aVoiceHandle, double aSeconds)
@@ -838,10 +838,10 @@ unsigned int Bus_play(void * aClassPtr, AudioSource * aSound)
 	return cl->play(*aSound);
 }
 
-unsigned int Bus_playEx(void * aClassPtr, AudioSource * aSound, float aVolume, float aPan, int aPaused)
+unsigned int Bus_playEx(void * aClassPtr, AudioSource * aSound, float aVolume, float aPan, float aPitch, int aPaused, int aLoop)
 {
 	Bus * cl = (Bus *)aClassPtr;
-	return cl->play(*aSound, aVolume, aPan, !!aPaused);
+	return cl->play(*aSound, aVolume, aPan, aPitch, !!aPaused, !!aLoop);
 }
 
 unsigned int Bus_playClocked(void * aClassPtr, double aSoundTime, AudioSource * aSound)
@@ -944,6 +944,24 @@ void Bus_setPriority(void * aClassPtr, float aPriority)
 {
 	Bus * cl = (Bus *)aClassPtr;
 	cl->setPriority(aPriority);
+}
+
+void Bus_setConcurrentGroup(void * aClassPtr, int aConcurrentGroup)
+{
+	Bus * cl = (Bus *)aClassPtr;
+	cl->setConcurrentGroup(aConcurrentGroup);
+}
+
+void Bus_setMaxConcurrent(void * aClassPtr, int aMaxConcurrent)
+{
+	Bus * cl = (Bus *)aClassPtr;
+	cl->setMaxConcurrent(aMaxConcurrent);
+}
+
+void Bus_setMinConcurrentInterrupt(void * aClassPtr, float aMinConcurrentInterrupt)
+{
+	Bus * cl = (Bus *)aClassPtr;
+	cl->setMinConcurrentInterrupt(aMinConcurrentInterrupt);
 }
 
 void Bus_setLooping(void * aClassPtr, int aLoop)
@@ -1370,6 +1388,24 @@ void Queue_setPriority(void * aClassPtr, float aPriority)
 	cl->setPriority(aPriority);
 }
 
+void Queue_setConcurrentGroup(void * aClassPtr, int aConcurrentGroup)
+{
+	Queue * cl = (Queue *)aClassPtr;
+	cl->setConcurrentGroup(aConcurrentGroup);
+}
+
+void Queue_setMaxConcurrent(void * aClassPtr, int aMaxConcurrent)
+{
+	Queue * cl = (Queue *)aClassPtr;
+	cl->setMaxConcurrent(aMaxConcurrent);
+}
+
+void Queue_setMinConcurrentInterrupt(void * aClassPtr, float aMinConcurrentInterrupt)
+{
+	Queue * cl = (Queue *)aClassPtr;
+	cl->setMinConcurrentInterrupt(aMinConcurrentInterrupt);
+}
+
 void Queue_setLooping(void * aClassPtr, int aLoop)
 {
 	Queue * cl = (Queue *)aClassPtr;
@@ -1594,6 +1630,24 @@ void Wav_setPriority(void * aClassPtr, float aPriority)
 	cl->setPriority(aPriority);
 }
 
+void Wav_setConcurrentGroup(void * aClassPtr, int aConcurrentGroup)
+{
+	Wav * cl = (Wav *)aClassPtr;
+	cl->setConcurrentGroup(aConcurrentGroup);
+}
+
+void Wav_setMaxConcurrent(void * aClassPtr, int aMaxConcurrent)
+{
+	Wav * cl = (Wav *)aClassPtr;
+	cl->setMaxConcurrent(aMaxConcurrent);
+}
+
+void Wav_setMinConcurrentInterrupt(void * aClassPtr, float aMinConcurrentInterrupt)
+{
+	Wav * cl = (Wav *)aClassPtr;
+	cl->setMinConcurrentInterrupt(aMinConcurrentInterrupt);
+}
+
 void Wav_setLooping(void * aClassPtr, int aLoop)
 {
 	Wav * cl = (Wav *)aClassPtr;
@@ -1792,6 +1846,24 @@ void WavStream_setPriority(void * aClassPtr, float aPriority)
 {
 	WavStream * cl = (WavStream *)aClassPtr;
 	cl->setPriority(aPriority);
+}
+
+void WavStream_setConcurrentGroup(void * aClassPtr, int aConcurrentGroup)
+{
+	WavStream * cl = (WavStream *)aClassPtr;
+	cl->setConcurrentGroup(aConcurrentGroup);
+}
+
+void WavStream_setMaxConcurrent(void * aClassPtr, int aMaxConcurrent)
+{
+	WavStream * cl = (WavStream *)aClassPtr;
+	cl->setMaxConcurrent(aMaxConcurrent);
+}
+
+void WavStream_setMinConcurrentInterrupt(void * aClassPtr, float aMinConcurrentInterrupt)
+{
+	WavStream * cl = (WavStream *)aClassPtr;
+	cl->setMinConcurrentInterrupt(aMinConcurrentInterrupt);
 }
 
 void WavStream_setLooping(void * aClassPtr, int aLoop)

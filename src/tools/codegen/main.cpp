@@ -832,7 +832,7 @@ void generate()
 	f = fopen("../include/soloud_c.h", "w");
 	cppf = fopen(OUTDIR "soloud_c.cpp", "w");
 	deff = fopen(OUTDIR "soloud.def", "w");
-	pyff = fopen(PYOUTDIR "soloud_codegen.py", "w");
+	pyff = fopen("/dev/null", "w");
 	fileheader(f);
 	fileheader(cppf);
 	fprintf(pyff, "# " VERSION "\n# Warning: This file is generated. Any manual changes will be overwritten.\n# Data for SoLoud glue code generation\n\n");
