@@ -73,7 +73,7 @@ freely, subject to the following restrictions:
 #endif
 #endif
 
-#define SOLOUD_VERSION 202409
+#define SOLOUD_VERSION 202511
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -190,7 +190,6 @@ namespace SoLoud
 			OPENAL,
 			COREAUDIO,
 			OPENSLES,
-			VITA_HOMEBREW,
 			MINIAUDIO,
 			NOSOUND,
 			NULLDRIVER,
