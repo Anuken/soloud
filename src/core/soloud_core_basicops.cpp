@@ -95,8 +95,6 @@ namespace SoLoud
 		{
 			mVoice[ch]->mCurrentChannelVolume[i] = mVoice[ch]->mChannelVolume[i] * mVoice[ch]->mOverallVolume;
 		}
-
-		setVoiceRelativePlaySpeed_internal(ch, 1);
 		
 		for (i = 0; i < FILTERS_PER_STREAM; i++)
 		{
