@@ -309,6 +309,7 @@ extern "C"
 
 	int Soloud_Filehack_fseek(Soloud_Filehack *f, int idx, int base)
 	{
+		if(f == NULL) return 0;
 		SoLoud::File *fp = (SoLoud::File *)f;
 		switch (base)
 		{

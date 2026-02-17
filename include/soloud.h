@@ -94,7 +94,7 @@ freely, subject to the following restrictions:
 #endif
 
 // 1)mono, 2)stereo 4)quad 6)5.1 8)7.1
-#define MAX_CHANNELS 2
+#define MAX_CHANNELS 8
 
 // Default resampler for both main and bus mixers
 #define SOLOUD_DEFAULT_RESAMPLER SoLoud::Soloud::RESAMPLER_LINEAR
