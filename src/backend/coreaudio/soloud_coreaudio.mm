@@ -114,21 +114,23 @@ namespace SoLoud
 		#if defined(MA_APPLE_MOBILE)
 			@autoreleasepool {
 					AVAudioSession* session = [AVAudioSession sharedInstance];
-					[session setCategory:AVAudioSessionCategoryAmbient error:nil];
+					[session setCategory:AVAudioSessionCategoryPlayback
+         	withOptions:AVAudioSessionCategoryOptionMixWithOthers
+               error:nil];
 					[session setActive:YES error:nil];
 
 					// [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector (routeChange :) name: AVAudioSessionRouteChangeNotification object: nil];
-					[[NSNotificationCenter defaultCenter] addObserverForName: AVAudioSessionInterruptionNotification object: session queue: nil usingBlock: ^ (NSNotification * notification)
-					{
+					[[NSNotificationCenter defaultCenter] addObserverForName: AVAudioSessionInterruptionNotification object: session queue: nil usingBlock: ^ (NSNotification * notification){
 							int status = [[notification.userInfo valueForKey: AVAudioSessionInterruptionTypeKey] intValue];
-							if (status == AVAudioSessionInterruptionTypeBegan)
-							{
-									aSoloud->pause();
-							}
-							else if (status == AVAudioSessionInterruptionTypeEnded)
-							{
-									[[AVAudioSession sharedInstance] setActive: TRUE error: nil];
+							if (status == AVAudioSessionInterruptionTypeBegan){
+								aSoloud->pause();
+							}else if (status == AVAudioSessionInterruptionTypeEnded){
+
+								NSInteger options = [[notification.userInfo valueForKey:AVAudioSessionInterruptionOptionKey] integerValue];
+								if (options & AVAudioSessionInterruptionOptionShouldResume) {
+									[[AVAudioSession sharedInstance] setActive:TRUE error:nil];
 									aSoloud->resume();
+								}
 							}
 					}];
 			}
