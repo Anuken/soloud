@@ -64,11 +64,18 @@ namespace SoLoud
 
 	drmp3_bool32 drmp3_seek_func(void* pUserData, int offset, drmp3_seek_origin origin)
 	{
-		File *fp = (File*)pUserData;
-		if (origin != drmp3_seek_origin_start)
-			offset += fp->pos();
-		fp->seek(offset);
-		return 1;
+			File *fp = (File*)pUserData;
+			if (origin != DRMP3_SEEK_SET)
+					offset += fp->pos();
+			fp->seek(offset);
+			return 1;
+	}
+
+	drmp3_uint32 drmp3_tell_func(void* pUserData, drmp3_int64* pCursor)
+	{
+			File *fp = (File*)pUserData;
+			*pCursor = fp->pos();
+			return 0; // 0 = success
 	}
 
 	drmp3_bool32 drwav_seek_func(void* pUserData, int offset, drwav_seek_origin origin)
@@ -162,7 +169,7 @@ namespace SoLoud
 			if (mParent->mFiletype == WAVSTREAM_MP3)
 			{
 				mCodec.mMp3 = new drmp3;
-				if (!drmp3_init(mCodec.mMp3, drmp3_read_func, drmp3_seek_func, (void*)mFile, NULL))
+				if (!drmp3_init(mCodec.mMp3, drmp3_read_func, drmp3_seek_func, drmp3_tell_func, NULL, (void*)mFile, NULL))
 				{
 					delete mCodec.mMp3;
 					mCodec.mMp3 = 0;
@@ -347,21 +354,60 @@ namespace SoLoud
 
 	result WavStreamInstance::seek(double aSeconds, float* mScratch, unsigned int mScratchSize)
 	{
-		if (mCodec.mOgg)
-		{
-			int pos = (int)floor(mBaseSamplerate * aSeconds);
-			stb_vorbis_seek(mCodec.mOgg, pos);
-			// Since the position that we just sought to might not be *exactly*
-			// the position we asked for, we're re-calculating the position just
-			// for the sake of correctness.
-			mOffset = stb_vorbis_get_sample_offset(mCodec.mOgg);
-			double newPosition = float(mOffset / mBaseSamplerate);
-			mStreamPosition = newPosition;
-			return 0;
-		}
-		else {
+			if (mFile == NULL)
+					return FILE_LOAD_FAILED;
+
+			switch (mParent->mFiletype)
+			{
+			case WAVSTREAM_OGG:
+					if (mCodec.mOgg)
+					{
+							int pos = (int)floor(mBaseSamplerate * aSeconds);
+							stb_vorbis_seek(mCodec.mOgg, pos);
+							mOffset = stb_vorbis_get_sample_offset(mCodec.mOgg);
+							mStreamPosition = (double)mOffset / mBaseSamplerate;
+							return SO_NO_ERROR;
+					}
+					break;
+
+			case WAVSTREAM_MP3:
+					if (mCodec.mMp3)
+					{
+							drmp3_uint64 pos = (drmp3_uint64)floor(mBaseSamplerate * aSeconds);
+							if (!drmp3_seek_to_pcm_frame(mCodec.mMp3, pos))
+									return INVALID_PARAMETER;
+							mOffset = (unsigned int)pos;
+							mStreamPosition = aSeconds;
+							return SO_NO_ERROR;
+					}
+					break;
+
+			case WAVSTREAM_FLAC:
+					if (mCodec.mFlac)
+					{
+							drflac_uint64 pos = (drflac_uint64)floor(mBaseSamplerate * aSeconds);
+							if (!drflac_seek_to_pcm_frame(mCodec.mFlac, pos))
+									return INVALID_PARAMETER;
+							mOffset = (unsigned int)pos;
+							mStreamPosition = aSeconds;
+							return SO_NO_ERROR;
+					}
+					break;
+
+			case WAVSTREAM_WAV:
+					if (mCodec.mWav)
+					{
+							drwav_uint64 pos = (drwav_uint64)floor(mBaseSamplerate * aSeconds);
+							if (!drwav_seek_to_pcm_frame(mCodec.mWav, pos))
+									return INVALID_PARAMETER;
+							mOffset = (unsigned int)pos;
+							mStreamPosition = aSeconds;
+							return SO_NO_ERROR;
+					}
+					break;
+			}
+
 			return AudioSourceInstance::seek(aSeconds, mScratch, mScratchSize);
-		}
 	}
 
 	result WavStreamInstance::rewind()
@@ -497,7 +543,7 @@ namespace SoLoud
 	{
 		fp->seek(0);
 		drmp3 decoder;
-		if (!drmp3_init(&decoder, drmp3_read_func, drmp3_seek_func, (void*)fp, NULL))
+		if (!drmp3_init(&decoder, drmp3_read_func, drmp3_seek_func, drmp3_tell_func, NULL, (void*)fp, NULL))
 			return FILE_LOAD_FAILED;
 
 
