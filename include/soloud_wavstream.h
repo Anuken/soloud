@@ -29,9 +29,6 @@ freely, subject to the following restrictions:
 #include "soloud.h"
 
 struct stb_vorbis;
-#ifndef dr_flac_h
-struct drflac;
-#endif
 #ifndef dr_mp3_h
 struct drmp3;
 #endif
@@ -52,7 +49,6 @@ namespace SoLoud
 		union codec
 		{
 			stb_vorbis *mOgg;
-			drflac *mFlac;
 			drmp3 *mMp3;
 			drwav *mWav;
 		} mCodec;
