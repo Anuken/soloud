@@ -94,7 +94,7 @@ class MemoryFile : public File {
 };
 
 #ifdef __ANDROID__
-#if false
+#if false //unused (doesn't work)
 	class AndroidFile : public File{
 
 	public:

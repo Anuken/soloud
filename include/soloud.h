@@ -80,7 +80,7 @@ freely, subject to the following restrictions:
 #endif
 
 // year | month (2 digits) | revision (2 digits)
-#define SOLOUD_VERSION 20260803
+#define SOLOUD_VERSION 20260804
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -96,7 +96,7 @@ freely, subject to the following restrictions:
 #define VOICE_COUNT SOLOUD_MAX_VOICE_COUNT
 #else
 // Maximum number of concurrent voices (hard limit is 4095)
-#define VOICE_COUNT 40
+#define VOICE_COUNT 100
 #endif
 
 // 1)mono, 2)stereo 4)quad 6)5.1 8)7.1
