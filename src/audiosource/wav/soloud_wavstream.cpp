@@ -168,7 +168,7 @@ WavStreamInstance::~WavStreamInstance(){
 }
 
 static int getOggData(float **aOggOutputs, float *aBuffer, int aSamples, int aPitch, int aFrameSize, int aFrameOffset, int aChannels){
-    if(aFrameSize <= 0)
+    if(aFrameSize <= 0 || aOggOutputs == NULL) // aFrameSize can be negative on a malformed/truncated stream, and a null output array must never be memcpy'd from regardless of the reported frame size
         return 0;
 
     int samples = aSamples;
@@ -214,7 +214,8 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
             }
 
             while(offset < aSamplesToRead){
-                mOggFrameSize = stb_vorbis_get_frame_float(mCodec.mOgg, NULL, &mOggOutputs);
+                int oggFrame = stb_vorbis_get_frame_float(mCodec.mOgg, NULL, &mOggOutputs); // read into a signed local first so a negative decode-error result can be detected
+                mOggFrameSize = (oggFrame > 0) ? oggFrame : 0;
                 mOggFrameOffset = 0;
                 int b = getOggData(mOggOutputs, aBuffer + offset, aSamplesToRead - offset, aBufferSize, mOggFrameSize, mOggFrameOffset, mChannels);
                 mOffset += b;
@@ -342,6 +343,11 @@ result WavStream::loadwav(File *fp){
     if(!drwav_init(&decoder, drwav_read_func, drwav_seek_func, drwav_tell_func, (void *)fp, NULL))
         return FILE_LOAD_FAILED;
 
+    if(decoder.channels > MAX_CHANNELS){
+        drwav_uninit(&decoder);
+        return FILE_LOAD_FAILED;
+    }
+
     mChannels = decoder.channels;
     if(mChannels > MAX_CHANNELS){
         mChannels = MAX_CHANNELS;
@@ -382,6 +388,11 @@ result WavStream::loadmp3(File *fp){
     drmp3 decoder;
     if(!drmp3_init(&decoder, drmp3_read_func, drmp3_seek_func, drmp3_tell_func, NULL, (void *)fp, NULL))
         return FILE_LOAD_FAILED;
+    
+    if(decoder.channels > MAX_CHANNELS){
+        drmp3_uninit(&decoder);
+        return FILE_LOAD_FAILED;
+    }
 
     mChannels = decoder.channels;
     if(mChannels > MAX_CHANNELS){

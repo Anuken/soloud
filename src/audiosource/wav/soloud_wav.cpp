@@ -136,22 +136,59 @@ result Wav::loadogg(MemoryFile *aReader){
     }else{
         mChannels = info.channels;
     }
-    mData = new float[samples * mChannels];
-    mSampleCount = samples;
+    if(samples < 0)
+        samples = 0;
+
+    // Cap the header-reported sample count before the upfront alloc so a corrupt/malicious header can't force a huge or failing allocation
+    const size_t kMaxInitialAllocBytes = 512u * 1024u * 1024u; // 512MB uncompressed (~25 min of audio - very stupid amount for a single wav)
+    unsigned int chDiv = (unsigned int)(mChannels > 0 ? mChannels : 1);
+    size_t maxInitialSamples = kMaxInitialAllocBytes / (sizeof(float) * chDiv);
+    unsigned int capacity = (unsigned int)samples;
+    if((size_t)capacity > maxInitialSamples)
+        capacity = (unsigned int)maxInitialSamples;
+
+    mData = new float[(size_t)capacity * mChannels];
     samples = 0;
+    bool grew = false;
     while(1){
         float **outputs;
         int n = stb_vorbis_get_frame_float(vorbis, NULL, &outputs);
-        if(n == 0){
+        if(n <= 0 || outputs == NULL){
             break;
+        }
+
+        if((unsigned int)samples + (unsigned int)n > capacity){
+            unsigned int newCapacity = ((unsigned int)samples + (unsigned int)n) * 2; // grow with headroom instead of overflowing mData when actual decoded length exceeds the header-reported length
+            float *newData = new float[(size_t)newCapacity * mChannels];
+            unsigned int ch2;
+            for(ch2 = 0; ch2 < (unsigned int)mChannels; ch2++)
+                memcpy(newData + ch2 * newCapacity, mData + ch2 * capacity, sizeof(float) * samples);
+            delete[] mData;
+            mData = newData;
+            capacity = newCapacity;
+            grew = true;
         }
 
         unsigned int ch;
         for(ch = 0; ch < mChannels; ch++)
-            memcpy(mData + samples + mSampleCount * ch, outputs[ch], sizeof(float) * n);
+            memcpy(mData + samples + capacity * ch, outputs[ch], sizeof(float) * n);
 
         samples += n;
     }
+
+    // Only shrink to exact size if we actually grew past the initial capacity; ordinary files skip this and just use capacity as mSampleCount, same cost as the original code.
+    if(grew && (unsigned int)samples != capacity){
+        float *exactData = new float[(size_t)samples * mChannels]; // reallocate to exact size so per-channel stride equals mSampleCount, matching what WavInstance::getAudio assumes
+        unsigned int ch3;
+        for(ch3 = 0; ch3 < (unsigned int)mChannels; ch3++)
+            memcpy(exactData + ch3 * samples, mData + ch3 * capacity, sizeof(float) * samples);
+        delete[] mData;
+        mData = exactData;
+        mSampleCount = (unsigned int)samples;
+    } else {
+        mSampleCount = capacity;
+    }
+
     stb_vorbis_close(vorbis);
 
     return 0;
