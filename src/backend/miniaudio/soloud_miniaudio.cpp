@@ -27,13 +27,11 @@ distribution.
 
 #if !defined(WITH_MINIAUDIO)
 
-namespace SoLoud
-{
-    result miniaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer)
-    {
-        return NOT_IMPLEMENTED;
-    }
+namespace SoLoud {
+result miniaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer){
+    return NOT_IMPLEMENTED;
 }
+} // namespace SoLoud
 
 #else
 
@@ -46,54 +44,50 @@ namespace SoLoud
 #define MA_NO_VORBIS
 #define MA_NO_OPUS
 #define MA_NO_MP3
-#include "miniaudio.h"
 #include <math.h>
 
-namespace SoLoud
-{
-    ma_device gDevice;
-    ma_context gContext;
+#include "miniaudio.h"
 
-    void soloud_miniaudio_audiomixer(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
-    {
-        SoLoud::Soloud *soloud = (SoLoud::Soloud *)pDevice->pUserData;
-            soloud->mix((float *)pOutput, frameCount);
+namespace SoLoud {
+ma_device gDevice;
+ma_context gContext;
+
+void soloud_miniaudio_audiomixer(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount){
+    SoLoud::Soloud *soloud = (SoLoud::Soloud *)pDevice->pUserData;
+    soloud->mix((float *)pOutput, frameCount);
+}
+
+static void soloud_miniaudio_deinit(SoLoud::Soloud *aSoloud){
+    ma_device_uninit(&gDevice);
+    ma_context_uninit(&gContext);
+}
+
+result miniaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels){
+    ma_context_config context_config = ma_context_config_init();
+    context_config.coreaudio.sessionCategory = ma_ios_session_category_ambient;
+
+    if(ma_context_init(NULL, 0, &context_config, &gContext) != MA_SUCCESS){
+        return UNKNOWN_ERROR;
     }
 
-    static void soloud_miniaudio_deinit(SoLoud::Soloud *aSoloud)
-    {
-        ma_device_uninit(&gDevice);
-        ma_context_uninit(&gContext);
+    ma_device_config config = ma_device_config_init(ma_device_type_playback);
+    config.playback.format = ma_format_f32;
+    config.playback.channels = aChannels;
+    config.sampleRate = aSamplerate;
+    config.dataCallback = soloud_miniaudio_audiomixer;
+    config.pUserData = (void *)aSoloud;
+
+    if(ma_device_init(&gContext, &config, &gDevice) != MA_SUCCESS){
+        return UNKNOWN_ERROR;
     }
 
-    result miniaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels)
-    {
-        ma_context_config context_config = ma_context_config_init();
-        context_config.coreaudio.sessionCategory = ma_ios_session_category_ambient;
+    aSoloud->postinit_internal(gDevice.sampleRate, gDevice.playback.internalPeriodSizeInFrames, aFlags, gDevice.playback.channels);
 
-        if (ma_context_init(NULL, 0, &context_config, &gContext) != MA_SUCCESS) {
-            return UNKNOWN_ERROR;
-        }
+    aSoloud->mBackendCleanupFunc = soloud_miniaudio_deinit;
 
-        ma_device_config config = ma_device_config_init(ma_device_type_playback);
-        config.playback.format    = ma_format_f32;
-        config.playback.channels  = aChannels;
-        config.sampleRate         = aSamplerate;
-        config.dataCallback       = soloud_miniaudio_audiomixer;
-        config.pUserData          = (void *)aSoloud;
-
-        if (ma_device_init(&gContext, &config, &gDevice) != MA_SUCCESS)
-        {
-            return UNKNOWN_ERROR;
-        }
-
-        aSoloud->postinit_internal(gDevice.sampleRate, gDevice.playback.internalPeriodSizeInFrames, aFlags, gDevice.playback.channels);
-
-        aSoloud->mBackendCleanupFunc = soloud_miniaudio_deinit;
-
-        ma_device_start(&gDevice);
-        aSoloud->mBackendString = "MiniAudio";
-        return 0;
-    }
-};
+    ma_device_start(&gDevice);
+    aSoloud->mBackendString = "MiniAudio";
+    return 0;
+}
+}; // namespace SoLoud
 #endif

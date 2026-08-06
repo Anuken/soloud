@@ -28,55 +28,51 @@ freely, subject to the following restrictions:
 #include "soloud.h"
 #include "soloud_fftfilter.h"
 
-namespace SoLoud
-{
-	class EqFilter;
+namespace SoLoud {
+class EqFilter;
 
-	class EqFilterInstance : public FFTFilterInstance
-	{
-		enum FILTERATTRIBUTE
-		{
-			WET = 0,
-			BAND1 = 1,
-			BAND2 = 2,
-			BAND3 = 3,
-			BAND4 = 4,
-			BAND5 = 5,
-			BAND6 = 6,
-			BAND7 = 7,
-			BAND8 = 8
-		};
-		EqFilter *mParent;
-	public:
-		virtual void fftFilterChannel(float *aFFTBuffer, unsigned int aSamples, float aSamplerate, time aTime, unsigned int aChannel, unsigned int aChannels);
-		EqFilterInstance(EqFilter *aParent);
-	};
+class EqFilterInstance : public FFTFilterInstance {
+    enum FILTERATTRIBUTE {
+        WET = 0,
+        BAND1 = 1,
+        BAND2 = 2,
+        BAND3 = 3,
+        BAND4 = 4,
+        BAND5 = 5,
+        BAND6 = 6,
+        BAND7 = 7,
+        BAND8 = 8
+    };
+    EqFilter *mParent;
 
-	class EqFilter : public FFTFilter
-	{
-	public:
-		enum FILTERATTRIBUTE
-		{
-			WET = 0,
-			BAND1 = 1,
-			BAND2 = 2,
-			BAND3 = 3,
-			BAND4 = 4,
-			BAND5 = 5,
-			BAND6 = 6,
-			BAND7 = 7,
-			BAND8 = 8
-		};
-		virtual int getParamCount();
-		virtual const char* getParamName(unsigned int aParamIndex);
-		virtual unsigned int getParamType(unsigned int aParamIndex);
-		virtual float getParamMax(unsigned int aParamIndex);
-		virtual float getParamMin(unsigned int aParamIndex);
-		float mVolume[8];
-		result setParam(unsigned int aBand, float aVolume);
-		virtual FilterInstance *createInstance();
-		EqFilter();
-	};
-}
+   public:
+    virtual void fftFilterChannel(float *aFFTBuffer, unsigned int aSamples, float aSamplerate, time aTime, unsigned int aChannel, unsigned int aChannels);
+    EqFilterInstance(EqFilter *aParent);
+};
+
+class EqFilter : public FFTFilter {
+   public:
+    enum FILTERATTRIBUTE {
+        WET = 0,
+        BAND1 = 1,
+        BAND2 = 2,
+        BAND3 = 3,
+        BAND4 = 4,
+        BAND5 = 5,
+        BAND6 = 6,
+        BAND7 = 7,
+        BAND8 = 8
+    };
+    virtual int getParamCount();
+    virtual const char *getParamName(unsigned int aParamIndex);
+    virtual unsigned int getParamType(unsigned int aParamIndex);
+    virtual float getParamMax(unsigned int aParamIndex);
+    virtual float getParamMin(unsigned int aParamIndex);
+    float mVolume[8];
+    result setParam(unsigned int aBand, float aVolume);
+    virtual FilterInstance *createInstance();
+    EqFilter();
+};
+} // namespace SoLoud
 
 #endif

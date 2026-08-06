@@ -27,57 +27,54 @@ freely, subject to the following restrictions:
 
 #include "soloud.h"
 
-namespace SoLoud
-{
-	class FreeverbFilter;
-	namespace FreeverbImpl
-	{
-		class Revmodel;
-	}
-
-	class FreeverbFilterInstance : public FilterInstance
-	{
-		enum FILTERPARAM {
-			WET = 0,
-			FREEZE,
-			ROOMSIZE,
-			DAMP,
-			WIDTH
-		};		
-
-		FreeverbFilter *mParent;
-		FreeverbImpl::Revmodel *mModel;
-	public:
-		virtual void filter(float* aBuffer, unsigned int aSamples, unsigned int aBufferSize, unsigned int aChannels, float aSamplerate, time aTime);
-		virtual ~FreeverbFilterInstance();
-		FreeverbFilterInstance(FreeverbFilter *aParent);
-	};
-
-	class FreeverbFilter : public Filter
-	{
-	public:
-		enum FILTERPARAM {
-			WET = 0,
-			FREEZE,
-			ROOMSIZE,
-			DAMP,
-			WIDTH
-		};
-		virtual int getParamCount();
-		virtual const char* getParamName(unsigned int aParamIndex);
-		virtual unsigned int getParamType(unsigned int aParamIndex);
-		virtual float getParamMax(unsigned int aParamIndex);
-		virtual float getParamMin(unsigned int aParamIndex);
-
-		float mMode;
-		float mRoomSize;
-		float mDamp;
-		float mWidth;
-		virtual FreeverbFilterInstance *createInstance();
-		FreeverbFilter();
-		result setParams(float aMode, float aRoomSize, float aDamp, float aWidth);
-		virtual ~FreeverbFilter();
-	};
+namespace SoLoud {
+class FreeverbFilter;
+namespace FreeverbImpl {
+class Revmodel;
 }
+
+class FreeverbFilterInstance : public FilterInstance {
+    enum FILTERPARAM {
+        WET = 0,
+        FREEZE,
+        ROOMSIZE,
+        DAMP,
+        WIDTH
+    };
+
+    FreeverbFilter *mParent;
+    FreeverbImpl::Revmodel *mModel;
+
+   public:
+    virtual void filter(float *aBuffer, unsigned int aSamples, unsigned int aBufferSize, unsigned int aChannels, float aSamplerate, time aTime);
+    virtual ~FreeverbFilterInstance();
+    FreeverbFilterInstance(FreeverbFilter *aParent);
+};
+
+class FreeverbFilter : public Filter {
+   public:
+    enum FILTERPARAM {
+        WET = 0,
+        FREEZE,
+        ROOMSIZE,
+        DAMP,
+        WIDTH
+    };
+    virtual int getParamCount();
+    virtual const char *getParamName(unsigned int aParamIndex);
+    virtual unsigned int getParamType(unsigned int aParamIndex);
+    virtual float getParamMax(unsigned int aParamIndex);
+    virtual float getParamMin(unsigned int aParamIndex);
+
+    float mMode;
+    float mRoomSize;
+    float mDamp;
+    float mWidth;
+    virtual FreeverbFilterInstance *createInstance();
+    FreeverbFilter();
+    result setParams(float aMode, float aRoomSize, float aDamp, float aWidth);
+    virtual ~FreeverbFilter();
+};
+} // namespace SoLoud
 
 #endif

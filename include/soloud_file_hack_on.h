@@ -28,13 +28,11 @@ of stdio FILE* stuff.
 You can use soloud_file_hack_off.h to undef the stuff defined here.
 */
 
-
-
 #ifndef SEEK_SET
 #error soloud_file_hack_on must be included after stdio, otherwise the #define hacks will break stdio.
 #endif
 
-typedef void* Soloud_Filehack;
+typedef void *Soloud_Filehack;
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,8 +43,8 @@ extern int Soloud_Filehack_fread(void *dst, int s, int c, Soloud_Filehack *f);
 extern int Soloud_Filehack_fseek(Soloud_Filehack *f, int idx, int base);
 extern int Soloud_Filehack_ftell(Soloud_Filehack *f);
 extern int Soloud_Filehack_fclose(Soloud_Filehack *f);
-extern Soloud_Filehack * Soloud_Filehack_fopen(const char *aFilename, char *aMode);
-extern int Soloud_Filehack_fopen_s(Soloud_Filehack **f, const char* aFilename, char* aMode);
+extern Soloud_Filehack *Soloud_Filehack_fopen(const char *aFilename, char *aMode);
+extern int Soloud_Filehack_fopen_s(Soloud_Filehack **f, const char *aFilename, char *aMode);
 
 #ifdef __cplusplus
 }

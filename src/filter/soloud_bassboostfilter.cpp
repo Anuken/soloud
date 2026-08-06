@@ -22,75 +22,64 @@ freely, subject to the following restrictions:
    distribution.
 */
 
-#include <string.h>
-#include "soloud.h"
 #include "soloud_bassboostfilter.h"
 
+#include <string.h>
 
-namespace SoLoud
-{
-	BassboostFilterInstance::BassboostFilterInstance(BassboostFilter *aParent)
-	{
-		mParent = aParent;
-		initParams(2);
-		mParam[BOOST] = aParent->mBoost;
-	}
+#include "soloud.h"
 
-	void BassboostFilterInstance::fftFilterChannel(float *aFFTBuffer, unsigned int /*aSamples*/, float /*aSamplerate*/, time /*aTime*/, unsigned int /*aChannel*/, unsigned int /*aChannels*/)
-	{
-		comp2MagPhase(aFFTBuffer, 2);
-		unsigned int i;
-		for (i = 0; i < 2; i++)
-		{
-			aFFTBuffer[i*2] *= mParam[BOOST];
-		}
-		magPhase2Comp(aFFTBuffer, 2);
-	}
-
-	result BassboostFilter::setParams(float aBoost)
-	{
-		if (aBoost < 0)
-			return INVALID_PARAMETER;
-		mBoost = aBoost;
-		return SO_NO_ERROR;
-	}
-
-	int BassboostFilter::getParamCount()
-	{
-		return 2;
-	}
-
-	const char* BassboostFilter::getParamName(unsigned int aParamIndex)
-	{
-		if (aParamIndex == 1)
-			return "Boost";
-		return "Wet";
-	}
-
-	unsigned int BassboostFilter::getParamType(unsigned int aParamIndex)
-	{
-		return FLOAT_PARAM;
-	}
-
-	float BassboostFilter::getParamMax(unsigned int aParamIndex)
-	{
-		if (aParamIndex == 1)
-			return 10;
-		return 1;
-	}
-
-	float BassboostFilter::getParamMin(unsigned int aParamIndex)
-	{
-		return 0;
-	}
-
-	BassboostFilter::BassboostFilter()
-	{
-		mBoost = 2;
-	}
-
-	FilterInstance *BassboostFilter::createInstance()
-	{
-		return new BassboostFilterInstance(this);
-	}
+namespace SoLoud {
+BassboostFilterInstance::BassboostFilterInstance(BassboostFilter *aParent){
+    mParent = aParent;
+    initParams(2);
+    mParam[BOOST] = aParent->mBoost;
 }
+
+void BassboostFilterInstance::fftFilterChannel(float *aFFTBuffer, unsigned int /*aSamples*/, float /*aSamplerate*/, time /*aTime*/, unsigned int /*aChannel*/, unsigned int /*aChannels*/){
+    comp2MagPhase(aFFTBuffer, 2);
+    unsigned int i;
+    for(i = 0; i < 2; i++){
+        aFFTBuffer[i * 2] *= mParam[BOOST];
+    }
+    magPhase2Comp(aFFTBuffer, 2);
+}
+
+result BassboostFilter::setParams(float aBoost){
+    if(aBoost < 0)
+        return INVALID_PARAMETER;
+    mBoost = aBoost;
+    return SO_NO_ERROR;
+}
+
+int BassboostFilter::getParamCount(){
+    return 2;
+}
+
+const char *BassboostFilter::getParamName(unsigned int aParamIndex){
+    if(aParamIndex == 1)
+        return "Boost";
+    return "Wet";
+}
+
+unsigned int BassboostFilter::getParamType(unsigned int aParamIndex){
+    return FLOAT_PARAM;
+}
+
+float BassboostFilter::getParamMax(unsigned int aParamIndex){
+    if(aParamIndex == 1)
+        return 10;
+    return 1;
+}
+
+float BassboostFilter::getParamMin(unsigned int aParamIndex){
+    return 0;
+}
+
+BassboostFilter::BassboostFilter(){
+    mBoost = 2;
+}
+
+FilterInstance *BassboostFilter::createInstance(){
+    return new BassboostFilterInstance(this);
+}
+} // namespace SoLoud

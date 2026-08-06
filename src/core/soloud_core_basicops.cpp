@@ -23,190 +23,165 @@ freely, subject to the following restrictions:
 */
 
 #include <string.h>
+
 #include "soloud_internal.h"
 
 // Core "basic" operations - play, stop, etc
 
-namespace SoLoud
-{
-	handle Soloud::play(AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aPaused, bool aLoop, unsigned int aBus)
-	{
-		if (aSound.mFlags & AudioSource::SINGLE_INSTANCE)
-		{
-			// Only one instance allowed, stop others
-			aSound.stop();
-		}
+namespace SoLoud {
+handle Soloud::play(AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aPaused, bool aLoop, unsigned int aBus){
+    if(aSound.mFlags & AudioSource::SINGLE_INSTANCE){
+        // Only one instance allowed, stop others
+        aSound.stop();
+    }
 
-		// Creation of an audio instance may take significant amount of time,
-		// so let's not do it inside the audio thread mutex.
-		aSound.mSoloud = this;
-		SoLoud::AudioSourceInstance *instance = aSound.createInstance();
+    // Creation of an audio instance may take significant amount of time,
+    // so let's not do it inside the audio thread mutex.
+    aSound.mSoloud = this;
+    SoLoud::AudioSourceInstance *instance = aSound.createInstance();
 
-		lockAudioMutex_internal();
-		int ch = findFreeVoice_internal(aSound.mPriority, aSound.mConcurrentGroup, aSound.mMaxConcurrent, aSound.mMinConcurrentInterrupt, aVolume);
-		if (ch < 0) 
-		{
-			unlockAudioMutex_internal();
-			delete instance;
-			return 0;
-		}
-		if (!aSound.mAudioSourceID)
-		{
-			aSound.mAudioSourceID = mAudioSourceID;
-			mAudioSourceID++;
+    lockAudioMutex_internal();
+    int ch = findFreeVoice_internal(aSound.mPriority, aSound.mConcurrentGroup, aSound.mMaxConcurrent, aSound.mMinConcurrentInterrupt, aVolume);
+    if(ch < 0){
+        unlockAudioMutex_internal();
+        delete instance;
+        return 0;
+    }
+    if(!aSound.mAudioSourceID){
+        aSound.mAudioSourceID = mAudioSourceID;
+        mAudioSourceID++;
 
-			//auto-assigned concurrent groups go in the negatives as to not conflict with manually assigned ones
-			if(aSound.mConcurrentGroup == -1){
-				aSound.mConcurrentGroup = -((signed)mAudioSourceID) - 2;
-			}
-		}
-		mVoice[ch] = instance;
-		mVoice[ch]->mAudioSourceID = aSound.mAudioSourceID;
-		mVoice[ch]->mConcurrentGroupId = aSound.mConcurrentGroup;
-		mVoice[ch]->mBusHandle = aBus;
-		mVoice[ch]->init(aSound, mPlayIndex);
-		m3dData[ch].init(aSound);
+        // auto-assigned concurrent groups go in the negatives as to not conflict with manually assigned ones
+        if(aSound.mConcurrentGroup == -1){
+            aSound.mConcurrentGroup = -((signed)mAudioSourceID) - 2;
+        }
+    }
+    mVoice[ch] = instance;
+    mVoice[ch]->mAudioSourceID = aSound.mAudioSourceID;
+    mVoice[ch]->mConcurrentGroupId = aSound.mConcurrentGroup;
+    mVoice[ch]->mBusHandle = aBus;
+    mVoice[ch]->init(aSound, mPlayIndex);
+    m3dData[ch].init(aSound);
 
-		mPlayIndex++;
+    mPlayIndex++;
 
-		// 20 bits, skip the last one (top bits full = voice group)
-		if (mPlayIndex == 0xfffff) 
-		{
-			mPlayIndex = 0;
-		}
+    // 20 bits, skip the last one (top bits full = voice group)
+    if(mPlayIndex == 0xfffff){
+        mPlayIndex = 0;
+    }
 
-		if (aPaused) mVoice[ch]->mFlags |= AudioSourceInstance::PAUSED;
-		if (aLoop) mVoice[ch]->mFlags |= AudioSourceInstance::LOOPING;
-		
-		setVoiceRelativePlaySpeed_internal(ch, aPitch);
-		setVoicePan_internal(ch, aPan);
-		if (aVolume < 0)
-		{
-			setVoiceVolume_internal(ch, aSound.mVolume);
-		}
-		else
-		{
-			setVoiceVolume_internal(ch, aVolume);
-		}
+    if(aPaused)
+        mVoice[ch]->mFlags |= AudioSourceInstance::PAUSED;
+    if(aLoop)
+        mVoice[ch]->mFlags |= AudioSourceInstance::LOOPING;
 
-		// Fix initial voice volume ramp up		
-		int i;
-		for (i = 0; i < MAX_CHANNELS; i++)
-		{
-			mVoice[ch]->mCurrentChannelVolume[i] = mVoice[ch]->mChannelVolume[i] * mVoice[ch]->mOverallVolume;
-		}
-		
-		for (i = 0; i < FILTERS_PER_STREAM; i++)
-		{
-			if (aSound.mFilter[i])
-			{
-				mVoice[ch]->mFilter[i] = aSound.mFilter[i]->createInstance();
-			}
-		}
+    setVoiceRelativePlaySpeed_internal(ch, aPitch);
+    setVoicePan_internal(ch, aPan);
+    if(aVolume < 0){
+        setVoiceVolume_internal(ch, aSound.mVolume);
+    }else{
+        setVoiceVolume_internal(ch, aVolume);
+    }
 
-		mActiveVoiceDirty = true;
+    // Fix initial voice volume ramp up
+    int i;
+    for(i = 0; i < MAX_CHANNELS; i++){
+        mVoice[ch]->mCurrentChannelVolume[i] = mVoice[ch]->mChannelVolume[i] * mVoice[ch]->mOverallVolume;
+    }
 
-		unlockAudioMutex_internal();
+    for(i = 0; i < FILTERS_PER_STREAM; i++){
+        if(aSound.mFilter[i]){
+            mVoice[ch]->mFilter[i] = aSound.mFilter[i]->createInstance();
+        }
+    }
 
-		int handle = getHandleFromVoice_internal(ch);
-		return handle;
-	}
+    mActiveVoiceDirty = true;
 
-	handle Soloud::playClocked(time aSoundTime, AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aLoop, unsigned int aBus)
-	{
-		handle h = play(aSound, aVolume, aPan, aPitch, 1, aLoop, aBus);
-		lockAudioMutex_internal();
-		// mLastClockedTime is cleared to zero at start of every output buffer
-		time lasttime = mLastClockedTime;
-		if (lasttime == 0)
-		{
-			mLastClockedTime = aSoundTime;
-			lasttime = aSoundTime;
-		}
-		unlockAudioMutex_internal();
-		int samples = (int)floor((aSoundTime - lasttime) * mSamplerate);
-		// Make sure we don't delay too much (or overflow)
-		if (samples < 0 || samples > 2048)		
-			samples = 0;
-		setDelaySamples(h, samples);
-		setPause(h, 0);
-		return h;
-	}
+    unlockAudioMutex_internal();
 
-	handle Soloud::playBackground(AudioSource &aSound, float aVolume, float aPitch, bool aPaused, bool aLoop, unsigned int aBus)
-	{
-		handle h = play(aSound, aVolume, 0.0f, aPitch, aPaused, aLoop, aBus);
-		setPanAbsolute(h, 1.0f, 1.0f);
-		return h;
-	}
-
-	result Soloud::seek(handle aVoiceHandle, time aSeconds)
-	{
-		result res = SO_NO_ERROR;
-		result singleres = SO_NO_ERROR;
-		FOR_ALL_VOICES_PRE
-			singleres = mVoice[ch]->seek(aSeconds, mScratch.mData, mScratchSize);
-		if (singleres != SO_NO_ERROR)
-			res = singleres;
-		FOR_ALL_VOICES_POST
-		return res;
-	}
-
-
-	void Soloud::stop(handle aVoiceHandle)
-	{
-		FOR_ALL_VOICES_PRE
-			stopVoice_internal(ch);
-		FOR_ALL_VOICES_POST
-	}
-
-	void Soloud::stopAudioSource(AudioSource &aSound)
-	{
-		if (aSound.mAudioSourceID)
-		{
-			lockAudioMutex_internal();
-			
-			int i;
-			for (i = 0; i < (signed)mHighestVoice; i++)
-			{
-				if (mVoice[i] && mVoice[i]->mAudioSourceID == aSound.mAudioSourceID)
-				{
-					stopVoice_internal(i);
-				}
-			}
-			unlockAudioMutex_internal();
-		}
-	}
-
-	void Soloud::stopAll()
-	{
-		int i;
-		lockAudioMutex_internal();
-		for (i = 0; i < (signed)mHighestVoice; i++)
-		{
-			stopVoice_internal(i);
-		}
-		unlockAudioMutex_internal();
-	}
-
-	int Soloud::countAudioSource(AudioSource &aSound)
-	{
-		int count = 0;
-		if (aSound.mAudioSourceID)
-		{
-			lockAudioMutex_internal();
-
-			int i;
-			for (i = 0; i < (signed)mHighestVoice; i++)
-			{
-				if (mVoice[i] && mVoice[i]->mAudioSourceID == aSound.mAudioSourceID)
-				{
-					count++;
-				}
-			}
-			unlockAudioMutex_internal();
-		}
-		return count;
-	}
-
+    int handle = getHandleFromVoice_internal(ch);
+    return handle;
 }
+
+handle Soloud::playClocked(time aSoundTime, AudioSource &aSound, float aVolume, float aPan, float aPitch, bool aLoop, unsigned int aBus){
+    handle h = play(aSound, aVolume, aPan, aPitch, 1, aLoop, aBus);
+    lockAudioMutex_internal();
+    // mLastClockedTime is cleared to zero at start of every output buffer
+    time lasttime = mLastClockedTime;
+    if(lasttime == 0){
+        mLastClockedTime = aSoundTime;
+        lasttime = aSoundTime;
+    }
+    unlockAudioMutex_internal();
+    int samples = (int)floor((aSoundTime - lasttime) * mSamplerate);
+    // Make sure we don't delay too much (or overflow)
+    if(samples < 0 || samples > 2048)
+        samples = 0;
+    setDelaySamples(h, samples);
+    setPause(h, 0);
+    return h;
+}
+
+handle Soloud::playBackground(AudioSource &aSound, float aVolume, float aPitch, bool aPaused, bool aLoop, unsigned int aBus){
+    handle h = play(aSound, aVolume, 0.0f, aPitch, aPaused, aLoop, aBus);
+    setPanAbsolute(h, 1.0f, 1.0f);
+    return h;
+}
+
+result Soloud::seek(handle aVoiceHandle, time aSeconds){
+    result res = SO_NO_ERROR;
+    result singleres = SO_NO_ERROR;
+    FOR_ALL_VOICES_PRE
+    singleres = mVoice[ch]->seek(aSeconds, mScratch.mData, mScratchSize);
+    if(singleres != SO_NO_ERROR)
+        res = singleres;
+    FOR_ALL_VOICES_POST
+    return res;
+}
+
+void Soloud::stop(handle aVoiceHandle){
+    FOR_ALL_VOICES_PRE
+    stopVoice_internal(ch);
+    FOR_ALL_VOICES_POST
+}
+
+void Soloud::stopAudioSource(AudioSource &aSound){
+    if(aSound.mAudioSourceID){
+        lockAudioMutex_internal();
+
+        int i;
+        for(i = 0; i < (signed)mHighestVoice; i++){
+            if(mVoice[i] && mVoice[i]->mAudioSourceID == aSound.mAudioSourceID){
+                stopVoice_internal(i);
+            }
+        }
+        unlockAudioMutex_internal();
+    }
+}
+
+void Soloud::stopAll(){
+    int i;
+    lockAudioMutex_internal();
+    for(i = 0; i < (signed)mHighestVoice; i++){
+        stopVoice_internal(i);
+    }
+    unlockAudioMutex_internal();
+}
+
+int Soloud::countAudioSource(AudioSource &aSound){
+    int count = 0;
+    if(aSound.mAudioSourceID){
+        lockAudioMutex_internal();
+
+        int i;
+        for(i = 0; i < (signed)mHighestVoice; i++){
+            if(mVoice[i] && mVoice[i]->mAudioSourceID == aSound.mAudioSourceID){
+                count++;
+            }
+        }
+        unlockAudioMutex_internal();
+    }
+    return count;
+}
+
+} // namespace SoLoud

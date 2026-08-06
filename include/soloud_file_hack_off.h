@@ -28,13 +28,13 @@ See soloud_file_hack_on.h
 
 #if false
 
-#undef FILE  
-#undef fgetc 
-#undef fread 
-#undef fseek 
-#undef ftell 
+#undef FILE
+#undef fgetc
+#undef fread
+#undef fseek
+#undef ftell
 #undef fclose
-#undef fopen 
+#undef fopen
 #undef fopen_s
 
 #endif

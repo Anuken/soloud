@@ -27,45 +27,41 @@ freely, subject to the following restrictions:
 
 #include "soloud.h"
 
-namespace SoLoud
-{
-	class EchoFilter;
+namespace SoLoud {
+class EchoFilter;
 
-	class EchoFilterInstance : public FilterInstance
-	{
-		float *mBuffer;
-		int mBufferLength;
-		int mBufferMaxLength;
-		int mOffset;
+class EchoFilterInstance : public FilterInstance {
+    float *mBuffer;
+    int mBufferLength;
+    int mBufferMaxLength;
+    int mOffset;
 
-	public:
-		virtual void filter(float *aBuffer, unsigned int aSamples, unsigned int aBufferSize, unsigned int aChannels, float aSamplerate, time aTime);
-		virtual ~EchoFilterInstance();
-		EchoFilterInstance(EchoFilter *aParent);
-	};
+   public:
+    virtual void filter(float *aBuffer, unsigned int aSamples, unsigned int aBufferSize, unsigned int aChannels, float aSamplerate, time aTime);
+    virtual ~EchoFilterInstance();
+    EchoFilterInstance(EchoFilter *aParent);
+};
 
-	class EchoFilter : public Filter
-	{
-	public:
-		enum FILTERATTRIBUTE
-		{
-			WET = 0,
-			DELAY,
-			DECAY,
-			FILTER
-		};
-		float mDelay;
-		float mDecay;
-		float mFilter;
-		virtual int getParamCount();
-		virtual const char* getParamName(unsigned int aParamIndex);
-		virtual unsigned int getParamType(unsigned int aParamIndex);
-		virtual float getParamMax(unsigned int aParamIndex);
-		virtual float getParamMin(unsigned int aParamIndex);
-		virtual FilterInstance *createInstance();
-		EchoFilter();
-		result setParams(float aDelay, float aDecay = 0.7f, float aFilter = 0.0f);
-	};
-}
+class EchoFilter : public Filter {
+   public:
+    enum FILTERATTRIBUTE {
+        WET = 0,
+        DELAY,
+        DECAY,
+        FILTER
+    };
+    float mDelay;
+    float mDecay;
+    float mFilter;
+    virtual int getParamCount();
+    virtual const char *getParamName(unsigned int aParamIndex);
+    virtual unsigned int getParamType(unsigned int aParamIndex);
+    virtual float getParamMax(unsigned int aParamIndex);
+    virtual float getParamMin(unsigned int aParamIndex);
+    virtual FilterInstance *createInstance();
+    EchoFilter();
+    result setParams(float aDelay, float aDecay = 0.7f, float aFilter = 0.0f);
+};
+} // namespace SoLoud
 
 #endif

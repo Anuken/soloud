@@ -27,59 +27,52 @@ freely, subject to the following restrictions:
 
 #if !defined(WITH_SDL_STATIC)
 
-namespace SoLoud
-{
-	result sdlstatic_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer)
-	{
-		return NOT_IMPLEMENTED;
-	}
+namespace SoLoud {
+result sdlstatic_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer){
+    return NOT_IMPLEMENTED;
 }
+} // namespace SoLoud
 
 #else
 
-#include "SDL.h"
 #include <math.h>
 
+#include "SDL.h"
 
-namespace SoLoud
-{
-	static SDL_AudioSpec gActiveAudioSpec;
-	void soloud_sdlstatic_audiomixer(void *userdata, Uint8 *stream, int len)
-	{
-		short *buf = (short*)stream;
-		SoLoud::Soloud *soloud = (SoLoud::Soloud *)userdata;
-		int samples = len / (gActiveAudioSpec.channels * sizeof(short));
-		soloud->mixSigned16(buf, samples);
-	}
+namespace SoLoud {
+static SDL_AudioSpec gActiveAudioSpec;
+void soloud_sdlstatic_audiomixer(void *userdata, Uint8 *stream, int len){
+    short *buf = (short *)stream;
+    SoLoud::Soloud *soloud = (SoLoud::Soloud *)userdata;
+    int samples = len / (gActiveAudioSpec.channels * sizeof(short));
+    soloud->mixSigned16(buf, samples);
+}
 
-	static void soloud_sdlstatic_deinit(SoLoud::Soloud *aSoloud)
-	{
-		SDL_CloseAudio();
-	}
+static void soloud_sdlstatic_deinit(SoLoud::Soloud *aSoloud){
+    SDL_CloseAudio();
+}
 
-	result sdlstatic_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels)
-	{
-		SDL_AudioSpec as;
-		as.freq = aSamplerate;
-		as.format = AUDIO_S16;
-		as.channels = aChannels;
-		as.samples = aBuffer;
-		as.callback = soloud_sdlstatic_audiomixer;
-		as.userdata = (void*)aSoloud;
+result sdlstatic_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels){
+    SDL_AudioSpec as;
+    as.freq = aSamplerate;
+    as.format = AUDIO_S16;
+    as.channels = aChannels;
+    as.samples = aBuffer;
+    as.callback = soloud_sdlstatic_audiomixer;
+    as.userdata = (void *)aSoloud;
 
-		if (SDL_OpenAudio(&as, &gActiveAudioSpec) < 0)
-		{
-			return UNKNOWN_ERROR;
-		}
+    if(SDL_OpenAudio(&as, &gActiveAudioSpec) < 0){
+        return UNKNOWN_ERROR;
+    }
 
-		aSoloud->postinit_internal(gActiveAudioSpec.freq, gActiveAudioSpec.samples, aFlags, gActiveAudioSpec.channels);
+    aSoloud->postinit_internal(gActiveAudioSpec.freq, gActiveAudioSpec.samples, aFlags, gActiveAudioSpec.channels);
 
-		aSoloud->mBackendCleanupFunc = soloud_sdlstatic_deinit;
+    aSoloud->mBackendCleanupFunc = soloud_sdlstatic_deinit;
 
-		SDL_PauseAudio(0);
-        aSoloud->mBackendString = "SDL1 (static)";
-		return 0;
-	}
-	
-};
+    SDL_PauseAudio(0);
+    aSoloud->mBackendString = "SDL1 (static)";
+    return 0;
+}
+
+}; // namespace SoLoud
 #endif

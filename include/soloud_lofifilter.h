@@ -27,54 +27,49 @@ freely, subject to the following restrictions:
 
 #include "soloud.h"
 
-namespace SoLoud
-{
-	class LofiFilter;
+namespace SoLoud {
+class LofiFilter;
 
-	struct LofiChannelData
-	{
-		float mSample;
-		float mSamplesToSkip;
-	};
+struct LofiChannelData {
+    float mSample;
+    float mSamplesToSkip;
+};
 
-	class LofiFilterInstance : public FilterInstance
-	{
-		enum FILTERPARAMS
-		{
-			WET,
-			SAMPLERATE,
-			BITDEPTH
-		};
-		LofiChannelData mChannelData[2];
-		
-		LofiFilter *mParent;
-	public:
-		virtual void filterChannel(float *aBuffer, unsigned int aSamples, float aSamplerate, time aTime, unsigned int aChannel, unsigned int aChannels);
-		virtual ~LofiFilterInstance();
-		LofiFilterInstance(LofiFilter *aParent);
-	};
+class LofiFilterInstance : public FilterInstance {
+    enum FILTERPARAMS {
+        WET,
+        SAMPLERATE,
+        BITDEPTH
+    };
+    LofiChannelData mChannelData[2];
 
-	class LofiFilter : public Filter
-	{
-	public:
-		enum FILTERPARAMS
-		{
-			WET,
-			SAMPLERATE,
-			BITDEPTH
-		};
-		float mSampleRate;
-		float mBitdepth;
-		virtual LofiFilterInstance *createInstance();
-		virtual int getParamCount();
-		virtual const char* getParamName(unsigned int aParamIndex);
-		virtual unsigned int getParamType(unsigned int aParamIndex);
-		virtual float getParamMax(unsigned int aParamIndex);
-		virtual float getParamMin(unsigned int aParamIndex);
-		LofiFilter();
-		result setParams(float aSampleRate, float aBitdepth);
-		virtual ~LofiFilter();
-	};
-}
+    LofiFilter *mParent;
+
+   public:
+    virtual void filterChannel(float *aBuffer, unsigned int aSamples, float aSamplerate, time aTime, unsigned int aChannel, unsigned int aChannels);
+    virtual ~LofiFilterInstance();
+    LofiFilterInstance(LofiFilter *aParent);
+};
+
+class LofiFilter : public Filter {
+   public:
+    enum FILTERPARAMS {
+        WET,
+        SAMPLERATE,
+        BITDEPTH
+    };
+    float mSampleRate;
+    float mBitdepth;
+    virtual LofiFilterInstance *createInstance();
+    virtual int getParamCount();
+    virtual const char *getParamName(unsigned int aParamIndex);
+    virtual unsigned int getParamType(unsigned int aParamIndex);
+    virtual float getParamMax(unsigned int aParamIndex);
+    virtual float getParamMin(unsigned int aParamIndex);
+    LofiFilter();
+    result setParams(float aSampleRate, float aBitdepth);
+    virtual ~LofiFilter();
+};
+} // namespace SoLoud
 
 #endif

@@ -25,226 +25,199 @@ distribution.
 #undef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <stdio.h>
-#include <string.h>
-#include "soloud.h"
 #include "soloud_file.h"
 
-namespace SoLoud
-{
-	unsigned int File::read8()
-	{
-		unsigned char d = 0;
-		read((unsigned char*)&d, 1);
-		return d;
-	}
+#include <stdio.h>
+#include <string.h>
 
-	unsigned int File::read16()
-	{
-		unsigned short d = 0;
-		read((unsigned char*)&d, 2);
-		return d;
-	}
+#include "soloud.h"
 
-	unsigned int File::read32()
-	{
-		unsigned int d = 0;
-		read((unsigned char*)&d, 4);
-		return d;
-	}
-
-DiskFile::DiskFile(FILE *fp):
-mFileHandle(fp)
-{
-
+namespace SoLoud {
+unsigned int File::read8(){
+    unsigned char d = 0;
+    read((unsigned char *)&d, 1);
+    return d;
 }
 
-	unsigned int DiskFile::read(unsigned char *aDst, unsigned int aBytes)
-	{
-		return (unsigned int)fread(aDst, 1, aBytes, mFileHandle);
-	}
+unsigned int File::read16(){
+    unsigned short d = 0;
+    read((unsigned char *)&d, 2);
+    return d;
+}
 
-	unsigned int DiskFile::length()
-	{
-		if (!mFileHandle)
-			return 0;
-		unsigned int pos = (unsigned int)ftell(mFileHandle);
-		fseek(mFileHandle, 0, SEEK_END);
-		unsigned int len = (unsigned int)ftell(mFileHandle);
-		fseek(mFileHandle, pos, SEEK_SET);
-		return len;
-	}
+unsigned int File::read32(){
+    unsigned int d = 0;
+    read((unsigned char *)&d, 4);
+    return d;
+}
 
-	void DiskFile::seek(int aOffset)
-	{
-		fseek(mFileHandle, aOffset, SEEK_SET);
-	}
+DiskFile::DiskFile(FILE *fp)
+    : mFileHandle(fp){
+}
 
-	unsigned int DiskFile::pos()
-	{
-		return (unsigned int)ftell(mFileHandle);
-	}
+unsigned int DiskFile::read(unsigned char *aDst, unsigned int aBytes){
+    return (unsigned int)fread(aDst, 1, aBytes, mFileHandle);
+}
 
-	FILE *DiskFile::getFilePtr()
-	{
-		return mFileHandle;
-	}
+unsigned int DiskFile::length(){
+    if(!mFileHandle)
+        return 0;
+    unsigned int pos = (unsigned int)ftell(mFileHandle);
+    fseek(mFileHandle, 0, SEEK_END);
+    unsigned int len = (unsigned int)ftell(mFileHandle);
+    fseek(mFileHandle, pos, SEEK_SET);
+    return len;
+}
 
-	DiskFile::~DiskFile()
-	{
-		if (mFileHandle)
-			fclose(mFileHandle);
-	}
+void DiskFile::seek(int aOffset){
+    fseek(mFileHandle, aOffset, SEEK_SET);
+}
 
-	DiskFile::DiskFile()
-	{
-		mFileHandle = 0;
-	}
+unsigned int DiskFile::pos(){
+    return (unsigned int)ftell(mFileHandle);
+}
 
-	result DiskFile::open(const char *aFilename)
-	{
-		if (!aFilename)
-			return INVALID_PARAMETER;
-		mFileHandle = fopen(aFilename, "rb");
-		if (!mFileHandle)
-			return FILE_NOT_FOUND;
-		return SO_NO_ERROR;
-	}
+FILE *DiskFile::getFilePtr(){
+    return mFileHandle;
+}
 
-	int DiskFile::eof()
-	{
-		return feof(mFileHandle);
-	}
+DiskFile::~DiskFile(){
+    if(mFileHandle)
+        fclose(mFileHandle);
+}
 
+DiskFile::DiskFile(){
+    mFileHandle = 0;
+}
 
+result DiskFile::open(const char *aFilename){
+    if(!aFilename)
+        return INVALID_PARAMETER;
+    mFileHandle = fopen(aFilename, "rb");
+    if(!mFileHandle)
+        return FILE_NOT_FOUND;
+    return SO_NO_ERROR;
+}
 
-	unsigned int MemoryFile::read(unsigned char *aDst, unsigned int aBytes)
-	{
-		if (mOffset + aBytes >= mDataLength)
-			aBytes = mDataLength - mOffset;
+int DiskFile::eof(){
+    return feof(mFileHandle);
+}
 
-		memcpy(aDst, mDataPtr + mOffset, aBytes);
-		mOffset += aBytes;
+unsigned int MemoryFile::read(unsigned char *aDst, unsigned int aBytes){
+    if(mOffset + aBytes >= mDataLength)
+        aBytes = mDataLength - mOffset;
 
-		return aBytes;
-	}
+    memcpy(aDst, mDataPtr + mOffset, aBytes);
+    mOffset += aBytes;
 
-	unsigned int MemoryFile::length()
-	{
-		return mDataLength;
-	}
+    return aBytes;
+}
 
-	void MemoryFile::seek(int aOffset)
-	{
-		if (aOffset >= 0)
-			mOffset = aOffset;
-		else
-			mOffset = mDataLength + aOffset;
-		if (mOffset > mDataLength-1)
-			mOffset = mDataLength-1;
-	}
+unsigned int MemoryFile::length(){
+    return mDataLength;
+}
 
-	unsigned int MemoryFile::pos()
-	{
-		return mOffset;
-	}
+void MemoryFile::seek(int aOffset){
+    if(aOffset >= 0)
+        mOffset = aOffset;
+    else
+        mOffset = mDataLength + aOffset;
+    if(mOffset > mDataLength - 1)
+        mOffset = mDataLength - 1;
+}
 
-	const unsigned char * MemoryFile::getMemPtr()
-	{
-		return mDataPtr;
-	}
+unsigned int MemoryFile::pos(){
+    return mOffset;
+}
 
-	MemoryFile::~MemoryFile()
-	{
-		if (mDataOwned)
-			delete[] mDataPtr;
-	}
+const unsigned char *MemoryFile::getMemPtr(){
+    return mDataPtr;
+}
 
-	MemoryFile::MemoryFile()
-	{
-		mDataPtr = 0;
-		mDataLength = 0;
-		mOffset = 0;
-		mDataOwned = false;
-	}
+MemoryFile::~MemoryFile(){
+    if(mDataOwned)
+        delete[] mDataPtr;
+}
 
-	result MemoryFile::openMem(const unsigned char *aData, unsigned int aDataLength, bool aCopy, bool aTakeOwnership)
-	{
-		if (aData == NULL || aDataLength == 0)
-			return INVALID_PARAMETER;
+MemoryFile::MemoryFile(){
+    mDataPtr = 0;
+    mDataLength = 0;
+    mOffset = 0;
+    mDataOwned = false;
+}
 
-		if (mDataOwned)
-			delete[] mDataPtr;
-		mDataPtr = 0;
-		mOffset = 0;
+result MemoryFile::openMem(const unsigned char *aData, unsigned int aDataLength, bool aCopy, bool aTakeOwnership){
+    if(aData == NULL || aDataLength == 0)
+        return INVALID_PARAMETER;
 
-		mDataLength = aDataLength;
+    if(mDataOwned)
+        delete[] mDataPtr;
+    mDataPtr = 0;
+    mOffset = 0;
 
-		if (aCopy)
-		{
-			mDataOwned = true;
-			mDataPtr = new unsigned char[aDataLength];
-			if (mDataPtr == NULL)
-				return OUT_OF_MEMORY;
-			memcpy((void *)mDataPtr, aData, aDataLength);
-			return SO_NO_ERROR;
-		}
+    mDataLength = aDataLength;
 
-		mDataPtr = aData;
-		mDataOwned = aTakeOwnership;
-		return SO_NO_ERROR;
-	}
+    if(aCopy){
+        mDataOwned = true;
+        mDataPtr = new unsigned char[aDataLength];
+        if(mDataPtr == NULL)
+            return OUT_OF_MEMORY;
+        memcpy((void *)mDataPtr, aData, aDataLength);
+        return SO_NO_ERROR;
+    }
 
-	result MemoryFile::openToMem(const char *aFile)
-	{
-		if (!aFile)
-			return INVALID_PARAMETER;
-		if (mDataOwned)
-			delete[] mDataPtr;
-		mDataPtr = 0;
-		mOffset = 0;
+    mDataPtr = aData;
+    mDataOwned = aTakeOwnership;
+    return SO_NO_ERROR;
+}
 
-		DiskFile df;
-		int res = df.open(aFile);
-		if (res != SO_NO_ERROR)
-			return res;
+result MemoryFile::openToMem(const char *aFile){
+    if(!aFile)
+        return INVALID_PARAMETER;
+    if(mDataOwned)
+        delete[] mDataPtr;
+    mDataPtr = 0;
+    mOffset = 0;
 
-		mDataLength = df.length();
-		mDataPtr = new unsigned char[mDataLength];
-		if (mDataPtr == NULL)
-			return OUT_OF_MEMORY;
-		df.read((unsigned char*)mDataPtr, mDataLength);
-		mDataOwned = true;
-		return SO_NO_ERROR;
-	}
+    DiskFile df;
+    int res = df.open(aFile);
+    if(res != SO_NO_ERROR)
+        return res;
 
-	result MemoryFile::openFileToMem(File *aFile)
-	{
-		if (!aFile)
-			return INVALID_PARAMETER;
-		if (mDataOwned)
-			delete[] mDataPtr;
-		mDataPtr = 0;
-		mOffset = 0;
+    mDataLength = df.length();
+    mDataPtr = new unsigned char[mDataLength];
+    if(mDataPtr == NULL)
+        return OUT_OF_MEMORY;
+    df.read((unsigned char *)mDataPtr, mDataLength);
+    mDataOwned = true;
+    return SO_NO_ERROR;
+}
 
-		mDataLength = aFile->length();
-		mDataPtr = new unsigned char[mDataLength];
-		if (mDataPtr == NULL)
-			return OUT_OF_MEMORY;
-		aFile->read((unsigned char*)mDataPtr, mDataLength);
-		mDataOwned = true;
-		return SO_NO_ERROR;
-	}
+result MemoryFile::openFileToMem(File *aFile){
+    if(!aFile)
+        return INVALID_PARAMETER;
+    if(mDataOwned)
+        delete[] mDataPtr;
+    mDataPtr = 0;
+    mOffset = 0;
 
-	int MemoryFile::eof()
-	{
-		if (mOffset >= mDataLength)
-			return 1;
-		return 0;
-	}
+    mDataLength = aFile->length();
+    mDataPtr = new unsigned char[mDataLength];
+    if(mDataPtr == NULL)
+        return OUT_OF_MEMORY;
+    aFile->read((unsigned char *)mDataPtr, mDataLength);
+    mDataOwned = true;
+    return SO_NO_ERROR;
+}
 
-	#ifdef __ANDROID__
-	#if false
+int MemoryFile::eof(){
+    if(mOffset >= mDataLength)
+        return 1;
+    return 0;
+}
+
+#ifdef __ANDROID__
+#if false
 	AndroidFile::AndroidFile( AAssetManager* AssetManager, const char* FileName )
 	{
 		Asset_ = AAssetManager_open( AssetManager, FileName, AASSET_MODE_UNKNOWN );
@@ -286,75 +259,66 @@ mFileHandle(fp)
 	{
 		return Position_;
 	}
-	#endif
-	#endif
+#endif
+#endif
+} // namespace SoLoud
+
+extern "C" {
+int Soloud_Filehack_fgetc(Soloud_Filehack *f){
+    SoLoud::File *fp = (SoLoud::File *)f;
+    if(fp->eof())
+        return EOF;
+    return fp->read8();
 }
 
-extern "C"
-{
-	int Soloud_Filehack_fgetc(Soloud_Filehack *f)
-	{
-		SoLoud::File *fp = (SoLoud::File *)f;
-		if (fp->eof())
-			return EOF;
-		return fp->read8();
-	}
+int Soloud_Filehack_fread(void *dst, int s, int c, Soloud_Filehack *f){
+    SoLoud::File *fp = (SoLoud::File *)f;
+    return fp->read((unsigned char *)dst, s * c) / s;
+}
 
-	int Soloud_Filehack_fread(void *dst, int s, int c, Soloud_Filehack *f)
-	{
-		SoLoud::File *fp = (SoLoud::File *)f;
-		return fp->read((unsigned char*)dst, s*c) / s;
+int Soloud_Filehack_fseek(Soloud_Filehack *f, int idx, int base){
+    if(f == NULL)
+        return 0;
+    SoLoud::File *fp = (SoLoud::File *)f;
+    switch(base){
+        case SEEK_CUR:
+            fp->seek(fp->pos() + idx);
+            break;
+        case SEEK_END:
+            fp->seek(fp->length() + idx);
+            break;
+        default:
+            fp->seek(idx);
+    }
+    return 0;
+}
 
-	}
+int Soloud_Filehack_ftell(Soloud_Filehack *f){
+    SoLoud::File *fp = (SoLoud::File *)f;
+    // MODIFICATION: This is an attempt to fix a null file crash.
+    if(fp == NULL)
+        return -1L;
+    return fp->pos();
+}
 
-	int Soloud_Filehack_fseek(Soloud_Filehack *f, int idx, int base)
-	{
-		if(f == NULL) return 0;
-		SoLoud::File *fp = (SoLoud::File *)f;
-		switch (base)
-		{
-		case SEEK_CUR:
-			fp->seek(fp->pos() + idx);
-			break;
-		case SEEK_END:
-			fp->seek(fp->length() + idx);
-			break;
-		default:
-			fp->seek(idx);
-		}
-		return 0;
-	}
+int Soloud_Filehack_fclose(Soloud_Filehack *f){
+    SoLoud::File *fp = (SoLoud::File *)f;
+    delete fp;
+    return 0;
+}
 
-	int Soloud_Filehack_ftell(Soloud_Filehack *f)
-	{
-		SoLoud::File *fp = (SoLoud::File *)f;
-		//MODIFICATION: This is an attempt to fix a null file crash.
-		if(fp == NULL) return -1L;
-		return fp->pos();
-	}
+Soloud_Filehack *Soloud_Filehack_fopen(const char *aFilename, char * /*aMode*/){
+    SoLoud::DiskFile *df = new SoLoud::DiskFile();
+    int res = df->open(aFilename);
+    if(res != SoLoud::SO_NO_ERROR){
+        delete df;
+        df = 0;
+    }
+    return (Soloud_Filehack *)df;
+}
 
-	int Soloud_Filehack_fclose(Soloud_Filehack *f)
-	{
-		SoLoud::File *fp = (SoLoud::File *)f;
-		delete fp;
-		return 0;
-	}
-
-	Soloud_Filehack * Soloud_Filehack_fopen(const char *aFilename, char * /*aMode*/)
-	{
-		SoLoud::DiskFile *df = new SoLoud::DiskFile();
-		int res = df->open(aFilename);
-		if (res != SoLoud::SO_NO_ERROR)
-		{
-			delete df;
-			df = 0;
-		}
-		return (Soloud_Filehack*)df;
-	}
-
-	int Soloud_Filehack_fopen_s(Soloud_Filehack** f, const char* aFilename, char* /*aMode*/)
-	{
-		*f = Soloud_Filehack_fopen(aFilename, 0);
-		return 1;
-	}
+int Soloud_Filehack_fopen_s(Soloud_Filehack **f, const char *aFilename, char * /*aMode*/){
+    *f = Soloud_Filehack_fopen(aFilename, 0);
+    return 1;
+}
 }

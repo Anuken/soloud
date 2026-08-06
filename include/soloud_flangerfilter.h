@@ -27,44 +27,40 @@ freely, subject to the following restrictions:
 
 #include "soloud.h"
 
-namespace SoLoud
-{
-	class FlangerFilter;
+namespace SoLoud {
+class FlangerFilter;
 
-	class FlangerFilterInstance : public FilterInstance
-	{
-		float *mBuffer;
-		unsigned int mBufferLength;
-		FlangerFilter *mParent;
-		unsigned int mOffset;
-		double mIndex;
+class FlangerFilterInstance : public FilterInstance {
+    float *mBuffer;
+    unsigned int mBufferLength;
+    FlangerFilter *mParent;
+    unsigned int mOffset;
+    double mIndex;
 
-	public:
-		virtual void filter(float *aBuffer, unsigned int aSamples, unsigned int aBufferSize, unsigned int aChannels, float aSamplerate, time aTime);
-		virtual ~FlangerFilterInstance();
-		FlangerFilterInstance(FlangerFilter *aParent);
-	};
+   public:
+    virtual void filter(float *aBuffer, unsigned int aSamples, unsigned int aBufferSize, unsigned int aChannels, float aSamplerate, time aTime);
+    virtual ~FlangerFilterInstance();
+    FlangerFilterInstance(FlangerFilter *aParent);
+};
 
-	class FlangerFilter : public Filter
-	{
-	public:
-		enum FILTERPARAMS
-		{
-			WET,
-			DELAY,
-			FREQ
-		};
-		float mDelay;
-		float mFreq;
-		virtual int getParamCount();
-		virtual const char* getParamName(unsigned int aParamIndex);
-		virtual unsigned int getParamType(unsigned int aParamIndex);
-		virtual float getParamMax(unsigned int aParamIndex);
-		virtual float getParamMin(unsigned int aParamIndex);
-		virtual FilterInstance *createInstance();
-		FlangerFilter();
-		result setParams(float aDelay, float aFreq);
-	};
-}
+class FlangerFilter : public Filter {
+   public:
+    enum FILTERPARAMS {
+        WET,
+        DELAY,
+        FREQ
+    };
+    float mDelay;
+    float mFreq;
+    virtual int getParamCount();
+    virtual const char *getParamName(unsigned int aParamIndex);
+    virtual unsigned int getParamType(unsigned int aParamIndex);
+    virtual float getParamMax(unsigned int aParamIndex);
+    virtual float getParamMin(unsigned int aParamIndex);
+    virtual FilterInstance *createInstance();
+    FlangerFilter();
+    result setParams(float aDelay, float aFreq);
+};
+} // namespace SoLoud
 
 #endif

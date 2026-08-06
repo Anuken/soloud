@@ -27,37 +27,35 @@ freely, subject to the following restrictions:
 
 #include "soloud.h"
 
-namespace SoLoud
-{
-	class WaveShaperFilter;
+namespace SoLoud {
+class WaveShaperFilter;
 
-	class WaveShaperFilterInstance : public FilterInstance
-	{	
-		WaveShaperFilter *mParent;
-	public:
-		virtual void filterChannel(float *aBuffer, unsigned int aSamples, float aSamplerate, time aTime, unsigned int aChannel, unsigned int aChannels);
-		virtual ~WaveShaperFilterInstance();
-		WaveShaperFilterInstance(WaveShaperFilter *aParent);
-	};
+class WaveShaperFilterInstance : public FilterInstance {
+    WaveShaperFilter *mParent;
 
-	class WaveShaperFilter : public Filter
-	{
-	public:
-		enum FILTERPARAMS {
-			WET = 0,
-			AMOUNT
-		};
-		float mAmount;
-		virtual WaveShaperFilterInstance *createInstance();
-		result setParams(float aAmount);
-		WaveShaperFilter();
-		virtual ~WaveShaperFilter();
-		virtual int getParamCount();
-		virtual const char* getParamName(unsigned int aParamIndex);
-		virtual unsigned int getParamType(unsigned int aParamIndex);
-		virtual float getParamMax(unsigned int aParamIndex);
-		virtual float getParamMin(unsigned int aParamIndex);
-	};
-}
+   public:
+    virtual void filterChannel(float *aBuffer, unsigned int aSamples, float aSamplerate, time aTime, unsigned int aChannel, unsigned int aChannels);
+    virtual ~WaveShaperFilterInstance();
+    WaveShaperFilterInstance(WaveShaperFilter *aParent);
+};
+
+class WaveShaperFilter : public Filter {
+   public:
+    enum FILTERPARAMS {
+        WET = 0,
+        AMOUNT
+    };
+    float mAmount;
+    virtual WaveShaperFilterInstance *createInstance();
+    result setParams(float aAmount);
+    WaveShaperFilter();
+    virtual ~WaveShaperFilter();
+    virtual int getParamCount();
+    virtual const char *getParamName(unsigned int aParamIndex);
+    virtual unsigned int getParamType(unsigned int aParamIndex);
+    virtual float getParamMax(unsigned int aParamIndex);
+    virtual float getParamMin(unsigned int aParamIndex);
+};
+} // namespace SoLoud
 
 #endif

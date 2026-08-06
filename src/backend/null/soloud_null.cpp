@@ -26,32 +26,27 @@ freely, subject to the following restrictions:
 
 #if !defined(WITH_NULL)
 
-namespace SoLoud
-{
-    result null_init(Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer)
-	{
-		return NOT_IMPLEMENTED;
-	}
-};
+namespace SoLoud {
+result null_init(Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer){
+    return NOT_IMPLEMENTED;
+}
+}; // namespace SoLoud
 
 #else
 
-namespace SoLoud
-{
-    static void nullCleanup(Soloud * /*aSoloud*/)
-    {
-    }
+namespace SoLoud {
+static void nullCleanup(Soloud * /*aSoloud*/){
+}
 
-    result null_init(Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels)
-    {
-		if (aChannels == 0 || aChannels == 3 || aChannels == 5 || aChannels == 7 || aChannels > MAX_CHANNELS || aBuffer < SAMPLE_GRANULARITY)
-			return INVALID_PARAMETER;
-        aSoloud->mBackendData = 0;
-        aSoloud->mBackendCleanupFunc = nullCleanup;
+result null_init(Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels){
+    if(aChannels == 0 || aChannels == 3 || aChannels == 5 || aChannels == 7 || aChannels > MAX_CHANNELS || aBuffer < SAMPLE_GRANULARITY)
+        return INVALID_PARAMETER;
+    aSoloud->mBackendData = 0;
+    aSoloud->mBackendCleanupFunc = nullCleanup;
 
-        aSoloud->postinit_internal(aSamplerate, aBuffer, aFlags, aChannels);
-        aSoloud->mBackendString = "null driver";
-        return SO_NO_ERROR;
-    }
-};
+    aSoloud->postinit_internal(aSamplerate, aBuffer, aFlags, aChannels);
+    aSoloud->mBackendString = "null driver";
+    return SO_NO_ERROR;
+}
+}; // namespace SoLoud
 #endif

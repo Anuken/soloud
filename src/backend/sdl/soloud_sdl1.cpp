@@ -27,72 +27,63 @@ freely, subject to the following restrictions:
 
 #if !defined(WITH_SDL1)
 
-namespace SoLoud
-{
-	result sdl1_init(SoLoud::Soloud * /*aSoloud*/, unsigned int /*aFlags*/, unsigned int /*aSamplerate*/, unsigned int /*aBuffer*/)
-	{
-		return NOT_IMPLEMENTED;
-	}
+namespace SoLoud {
+result sdl1_init(SoLoud::Soloud* /*aSoloud*/, unsigned int /*aFlags*/, unsigned int /*aSamplerate*/, unsigned int /*aBuffer*/){
+    return NOT_IMPLEMENTED;
 }
+} // namespace SoLoud
 
 #else
 
-#include "SDL.h"
 #include <math.h>
 
+#include "SDL.h"
 
-extern "C"
-{
-	int dll_SDL1_found();
-	int dll_SDL1_OpenAudio(SDL_AudioSpec *desired, SDL_AudioSpec *obtained);
-	void dll_SDL1_CloseAudio();
-	void dll_SDL1_PauseAudio(int pause_on);
+extern "C" {
+int dll_SDL1_found();
+int dll_SDL1_OpenAudio(SDL_AudioSpec *desired, SDL_AudioSpec *obtained);
+void dll_SDL1_CloseAudio();
+void dll_SDL1_PauseAudio(int pause_on);
 };
 
+namespace SoLoud {
+static SDL_AudioSpec gActiveAudioSpec;
 
-namespace SoLoud
-{
-	static SDL_AudioSpec gActiveAudioSpec;
+void soloud_sdl1_audiomixer(void *userdata, Uint8 *stream, int len){
+    short *buf = (short *)stream;
+    SoLoud::Soloud *soloud = (SoLoud::Soloud *)userdata;
+    int samples = len / (gActiveAudioSpec.channels * sizeof(short));
+    soloud->mixSigned16(buf, samples);
+}
 
-	void soloud_sdl1_audiomixer(void *userdata, Uint8 *stream, int len)
-	{
-		short *buf = (short*)stream;
-		SoLoud::Soloud *soloud = (SoLoud::Soloud *)userdata;
-		int samples = len / (gActiveAudioSpec.channels * sizeof(short));
-		soloud->mixSigned16(buf, samples);
-	}
+static void soloud_sdl1_deinit(SoLoud::Soloud *aSoloud){
+    dll_SDL1_CloseAudio();
+}
 
-	static void soloud_sdl1_deinit(SoLoud::Soloud *aSoloud)
-	{
-		dll_SDL1_CloseAudio();
-	}
+result sdl1_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels){
+    if(!dll_SDL1_found())
+        return DLL_NOT_FOUND;
 
-	result sdl1_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels)
-	{
-		if (!dll_SDL1_found())
-			return DLL_NOT_FOUND;
+    SDL_AudioSpec as;
+    as.freq = aSamplerate;
+    as.format = AUDIO_S16;
+    as.channels = aChannels;
+    as.samples = aBuffer;
+    as.callback = soloud_sdl1_audiomixer;
+    as.userdata = (void *)aSoloud;
 
-		SDL_AudioSpec as;
-		as.freq = aSamplerate;
-		as.format = AUDIO_S16;
-		as.channels = aChannels;
-		as.samples = aBuffer;
-		as.callback = soloud_sdl1_audiomixer;
-		as.userdata = (void*)aSoloud;
+    if(dll_SDL1_OpenAudio(&as, &gActiveAudioSpec) < 0){
+        return UNKNOWN_ERROR;
+    }
 
-		if (dll_SDL1_OpenAudio(&as, &gActiveAudioSpec) < 0)
-		{
-			return UNKNOWN_ERROR;
-		}
+    aSoloud->postinit_internal(gActiveAudioSpec.freq, gActiveAudioSpec.samples, aFlags, gActiveAudioSpec.channels);
 
-		aSoloud->postinit_internal(gActiveAudioSpec.freq, gActiveAudioSpec.samples, aFlags, gActiveAudioSpec.channels);
+    aSoloud->mBackendCleanupFunc = soloud_sdl1_deinit;
 
-		aSoloud->mBackendCleanupFunc = soloud_sdl1_deinit;
+    dll_SDL1_PauseAudio(0);
+    aSoloud->mBackendString = "SDL (dynamic)";
+    return 0;
+}
 
-		dll_SDL1_PauseAudio(0);
-        aSoloud->mBackendString = "SDL (dynamic)";
-		return 0;
-	}
-	
-};
+}; // namespace SoLoud
 #endif

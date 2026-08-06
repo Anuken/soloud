@@ -25,21 +25,19 @@ freely, subject to the following restrictions:
    distribution.
 */
 
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "soloud.h"
 #include "soloud_thread.h"
 
 #if !defined(WITH_COREAUDIO)
 
-namespace SoLoud
-{
-	result coreaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer)
-	{
-		return NOT_IMPLEMENTED;
-	}
+namespace SoLoud {
+result coreaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer){
+    return NOT_IMPLEMENTED;
 }
+} // namespace SoLoud
 #else
 
 #include <AudioToolbox/AudioToolbox.h>
@@ -58,129 +56,119 @@ namespace SoLoud
 
 static AudioQueueRef audioQueue = 0;
 
-namespace SoLoud
-{
-	void soloud_coreaudio_deinit(SoLoud::Soloud *aSoloud)
-	{
-		AudioQueueStop(audioQueue, true);
-		AudioQueueDispose(audioQueue, false);
-	}
+namespace SoLoud {
+void soloud_coreaudio_deinit(SoLoud::Soloud *aSoloud){
+    AudioQueueStop(audioQueue, true);
+    AudioQueueDispose(audioQueue, false);
+}
 
-	result soloud_coreaudio_pause(SoLoud::Soloud *aSoloud)
-	{
-		if (!audioQueue)
-			return UNKNOWN_ERROR;
+result soloud_coreaudio_pause(SoLoud::Soloud *aSoloud){
+    if(!audioQueue)
+        return UNKNOWN_ERROR;
 
-		AudioQueuePause(audioQueue);			// TODO: Error code
+    AudioQueuePause(audioQueue); // TODO: Error code
 
-		return 0;
-	}
+    return 0;
+}
 
-	result soloud_coreaudio_resume(SoLoud::Soloud *aSoloud)
-	{
-		if (!audioQueue)
-			return UNKNOWN_ERROR;
-	
-		AudioQueueStart(audioQueue, nil);		// TODO: Error code
+result soloud_coreaudio_resume(SoLoud::Soloud *aSoloud){
+    if(!audioQueue)
+        return UNKNOWN_ERROR;
 
-		return 0;
-	}
+    AudioQueueStart(audioQueue, nil); // TODO: Error code
 
-	static void coreaudio_mutex_lock(void *mutex)
-	{
-		Thread::lockMutex(mutex);
-	}
+    return 0;
+}
 
-	static void coreaudio_mutex_unlock(void *mutex)
-	{
-		Thread::unlockMutex(mutex);
-	}
+static void coreaudio_mutex_lock(void *mutex){
+    Thread::lockMutex(mutex);
+}
 
-	static void coreaudio_fill_buffer(void *context, AudioQueueRef queue, AudioQueueBufferRef buffer)
-	{
-		SoLoud::Soloud *aSoloud = (SoLoud::Soloud*)context;
-		aSoloud->mixSigned16((short*)buffer->mAudioData, buffer->mAudioDataByteSize / 4);
-		AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
-	}
+static void coreaudio_mutex_unlock(void *mutex){
+    Thread::unlockMutex(mutex);
+}
 
-	result coreaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels)
-	{
-		aSoloud->postinit_internal(aSamplerate, aBuffer, aFlags, 2);
-		aSoloud->mBackendCleanupFunc = soloud_coreaudio_deinit;
-		aSoloud->mBackendPauseFunc = soloud_coreaudio_pause;
-		aSoloud->mBackendResumeFunc = soloud_coreaudio_resume;
+static void coreaudio_fill_buffer(void *context, AudioQueueRef queue, AudioQueueBufferRef buffer){
+    SoLoud::Soloud *aSoloud = (SoLoud::Soloud *)context;
+    aSoloud->mixSigned16((short *)buffer->mAudioData, buffer->mAudioDataByteSize / 4);
+    AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
+}
 
-		//set the category to ambient on iOS to prevent interrupting other audio
-		#if defined(MA_APPLE_MOBILE)
-			@autoreleasepool {
-					AVAudioSession* session = [AVAudioSession sharedInstance];
-					[session setCategory:AVAudioSessionCategoryPlayback
-         	withOptions:AVAudioSessionCategoryOptionMixWithOthers
-               error:nil];
-					[session setActive:YES error:nil];
+result coreaudio_init(SoLoud::Soloud *aSoloud, unsigned int aFlags, unsigned int aSamplerate, unsigned int aBuffer, unsigned int aChannels){
+    aSoloud->postinit_internal(aSamplerate, aBuffer, aFlags, 2);
+    aSoloud->mBackendCleanupFunc = soloud_coreaudio_deinit;
+    aSoloud->mBackendPauseFunc = soloud_coreaudio_pause;
+    aSoloud->mBackendResumeFunc = soloud_coreaudio_resume;
 
-					// [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector (routeChange :) name: AVAudioSessionRouteChangeNotification object: nil];
-					[[NSNotificationCenter defaultCenter] addObserverForName: AVAudioSessionInterruptionNotification object: session queue: nil usingBlock: ^ (NSNotification * notification){
-							int status = [[notification.userInfo valueForKey: AVAudioSessionInterruptionTypeKey] intValue];
-							if (status == AVAudioSessionInterruptionTypeBegan){
-								aSoloud->pause();
-							}else if (status == AVAudioSessionInterruptionTypeEnded){
+// set the category to ambient on iOS to prevent interrupting other audio
+#if defined(MA_APPLE_MOBILE)
+    @autoreleasepool {
+        AVAudioSession *session = [AVAudioSession sharedInstance];
+        [session setCategory:AVAudioSessionCategoryPlayback
+                 withOptions:AVAudioSessionCategoryOptionMixWithOthers
+                       error:nil];
+        [session setActive:YES error:nil];
 
-								NSInteger options = [[notification.userInfo valueForKey:AVAudioSessionInterruptionOptionKey] integerValue];
-								if (options & AVAudioSessionInterruptionOptionShouldResume) {
-									[[AVAudioSession sharedInstance] setActive:TRUE error:nil];
-									aSoloud->resume();
-								}
-							}
-					}];
-			}
-			
-		#endif
+        // [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector (routeChange :) name: AVAudioSessionRouteChangeNotification object: nil];
+        [[NSNotificationCenter defaultCenter] addObserverForName:AVAudioSessionInterruptionNotification
+                                                          object:session
+                                                           queue:nil
+                                                      usingBlock:^(NSNotification *notification){
+                                                        int status = [[notification.userInfo valueForKey:AVAudioSessionInterruptionTypeKey] intValue];
+                                                        if(status == AVAudioSessionInterruptionTypeBegan){
+                                                            aSoloud->pause();
+                                                        }else if(status == AVAudioSessionInterruptionTypeEnded){
+                                                            NSInteger options = [[notification.userInfo valueForKey:AVAudioSessionInterruptionOptionKey] integerValue];
+                                                            if(options & AVAudioSessionInterruptionOptionShouldResume){
+                                                                [[AVAudioSession sharedInstance] setActive:TRUE error:nil];
+                                                                aSoloud->resume();
+                                                            }
+                                                        }
+                                                      }];
+    }
 
-		AudioStreamBasicDescription audioFormat;
-		audioFormat.mSampleRate = aSamplerate;
-		audioFormat.mFormatID = kAudioFormatLinearPCM;
-		audioFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-		audioFormat.mBytesPerPacket = 4;
-		audioFormat.mFramesPerPacket = 1;
-		audioFormat.mBytesPerFrame = 4;
-		audioFormat.mChannelsPerFrame = 2;
-		audioFormat.mBitsPerChannel = 16;
-		audioFormat.mReserved = 0;
+#endif
 
-		// create the audio queue
-		OSStatus result = AudioQueueNewOutput(&audioFormat, coreaudio_fill_buffer, aSoloud, NULL, NULL, 0, &audioQueue);
-		if(result)
-		{
-			//printf("AudioQueueNewOutput failed (%d)\n", result);
-			return UNKNOWN_ERROR;
-		}
+    AudioStreamBasicDescription audioFormat;
+    audioFormat.mSampleRate = aSamplerate;
+    audioFormat.mFormatID = kAudioFormatLinearPCM;
+    audioFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    audioFormat.mBytesPerPacket = 4;
+    audioFormat.mFramesPerPacket = 1;
+    audioFormat.mBytesPerFrame = 4;
+    audioFormat.mChannelsPerFrame = 2;
+    audioFormat.mBitsPerChannel = 16;
+    audioFormat.mReserved = 0;
 
-		// allocate and prime audio buffers
-		for(int i = 0; i < NUM_BUFFERS; ++i)
-		{
-			AudioQueueBufferRef buffer;
-			result = AudioQueueAllocateBuffer(audioQueue, aBuffer * 4, &buffer);
-			if(result)
-			{
-				//printf("AudioQueueAllocateBuffer failed (%d)\n", result);
-				return UNKNOWN_ERROR;
-			}
-			buffer->mAudioDataByteSize = aBuffer * 4;
-			memset(buffer->mAudioData, 0, buffer->mAudioDataByteSize);
-			AudioQueueEnqueueBuffer(audioQueue, buffer, 0, NULL);
-		}
+    // create the audio queue
+    OSStatus result = AudioQueueNewOutput(&audioFormat, coreaudio_fill_buffer, aSoloud, NULL, NULL, 0, &audioQueue);
+    if(result){
+        // printf("AudioQueueNewOutput failed (%d)\n", result);
+        return UNKNOWN_ERROR;
+    }
 
-		// start playback
-		result = AudioQueueStart(audioQueue, NULL);
-		if(result)
-		{
-			//printf("AudioQueueStart failed (%d)\n", result);
-			return UNKNOWN_ERROR;
-		}
+    // allocate and prime audio buffers
+    for(int i = 0; i < NUM_BUFFERS; ++i){
+        AudioQueueBufferRef buffer;
+        result = AudioQueueAllocateBuffer(audioQueue, aBuffer * 4, &buffer);
+        if(result){
+            // printf("AudioQueueAllocateBuffer failed (%d)\n", result);
+            return UNKNOWN_ERROR;
+        }
+        buffer->mAudioDataByteSize = aBuffer * 4;
+        memset(buffer->mAudioData, 0, buffer->mAudioDataByteSize);
+        AudioQueueEnqueueBuffer(audioQueue, buffer, 0, NULL);
+    }
 
-        aSoloud->mBackendString = "CoreAudio";
-		return 0;
-	}
-};
+    // start playback
+    result = AudioQueueStart(audioQueue, NULL);
+    if(result){
+        // printf("AudioQueueStart failed (%d)\n", result);
+        return UNKNOWN_ERROR;
+    }
+
+    aSoloud->mBackendString = "CoreAudio";
+    return 0;
+}
+}; // namespace SoLoud
 #endif

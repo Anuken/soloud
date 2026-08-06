@@ -27,27 +27,24 @@ freely, subject to the following restrictions:
 
 #include "soloud.h"
 
-namespace SoLoud
-{
-	namespace Misc
-	{
-		// Generate a waveform.
-		float generateWaveform(int aWaveform, float p);
+namespace SoLoud {
+namespace Misc {
+// Generate a waveform.
+float generateWaveform(int aWaveform, float p);
 
-		// WELL512 random
-		class Prg
-		{
-		public:
-			// random generator
-			Prg();
-			unsigned int mState[16];
-			unsigned int mIndex;
-			unsigned int rand();
-			float rand_float();
-			void srand(int aSeed);
-		};
-
-	};
+// WELL512 random
+class Prg {
+   public:
+    // random generator
+    Prg();
+    unsigned int mState[16];
+    unsigned int mIndex;
+    unsigned int rand();
+    float rand_float();
+    void srand(int aSeed);
 };
+
+}; // namespace Misc
+}; // namespace SoLoud
 
 #endif
