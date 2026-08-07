@@ -57,7 +57,6 @@ WavStreamInstance::WavStreamInstance(WavStream *aParent){
     mParent = aParent;
     mOffset = 0;
     mCodec.mOgg = 0;
-    mCodec.mFlac = 0;
     mFile = 0;
     if(aParent->mMemFile){
         MemoryFile *mf = new MemoryFile();
