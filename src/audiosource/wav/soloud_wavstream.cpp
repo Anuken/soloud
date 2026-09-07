@@ -101,9 +101,10 @@ WavStreamInstance::WavStreamInstance(WavStream *aParent){
 
     if(mFile){
         if(mParent->mFiletype == WAVSTREAM_WAV){
-            mCodec.mWav = new drwav;
-            if(!drwav_init(mCodec.mWav, drwav_read_func, drwav_seek_func, drwav_tell_func, (void *)mFile, NULL)){
-                delete mCodec.mWav;
+            drwav *wav = new drwav;
+            mCodec.mWav = wav;
+            if(!drwav_init(wav, drwav_read_func, drwav_seek_func, drwav_tell_func, (void *)mFile, NULL)){
+                delete wav;
                 mCodec.mWav = 0;
                 if(mFile != mParent->mStreamFile)
                     delete mFile;
@@ -123,9 +124,10 @@ WavStreamInstance::WavStreamInstance(WavStream *aParent){
             mOggFrameOffset = 0;
             mOggOutputs = 0;
         }else if(mParent->mFiletype == WAVSTREAM_MP3){
-            mCodec.mMp3 = new drmp3;
-            if(!drmp3_init(mCodec.mMp3, drmp3_read_func, drmp3_seek_func, drmp3_tell_func, NULL, (void *)mFile, NULL)){
-                delete mCodec.mMp3;
+            drmp3 *mp3 = new drmp3;
+            mCodec.mMp3 = mp3;
+            if(!drmp3_init(mp3, drmp3_read_func, drmp3_seek_func, drmp3_tell_func, NULL, (void *)mFile, NULL)){
+                delete mp3;
                 mCodec.mMp3 = 0;
                 if(mFile != mParent->mStreamFile)
                     delete mFile;
@@ -149,15 +151,17 @@ WavStreamInstance::~WavStreamInstance(){
             break;
         case WAVSTREAM_MP3:
             if(mCodec.mMp3){
-                drmp3_uninit(mCodec.mMp3);
-                delete mCodec.mMp3;
+                drmp3 *mp3 = (drmp3 *)mCodec.mMp3;
+                drmp3_uninit(mp3);
+                delete mp3;
                 mCodec.mMp3 = 0;
             }
             break;
         case WAVSTREAM_WAV:
             if(mCodec.mWav){
-                drwav_uninit(mCodec.mWav);
-                delete mCodec.mWav;
+                drwav *wav = (drwav *)mCodec.mWav;
+                drwav_uninit(wav);
+                delete wav;
                 mCodec.mWav = 0;
             }
             break;
@@ -190,15 +194,16 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
     switch(mParent->mFiletype){
         case WAVSTREAM_MP3: {
             unsigned int i, j, k;
+            drmp3 *mp3 = (drmp3 *)mCodec.mMp3;
 
             for(i = 0; i < aSamplesToRead; i += 512){
                 float tmp[512 * MAX_CHANNELS];
                 unsigned int blockSize = (aSamplesToRead - i) > 512 ? 512 : aSamplesToRead - i;
-                offset += (unsigned int)drmp3_read_pcm_frames_f32(mCodec.mMp3, blockSize, tmp);
+                offset += (unsigned int)drmp3_read_pcm_frames_f32(mp3, blockSize, tmp);
 
                 for(j = 0; j < blockSize; j++){
                     for(k = 0; k < mChannels; k++){
-                        aBuffer[k * aSamplesToRead + i + j] = tmp[j * mCodec.mMp3->channels + k];
+                        aBuffer[k * aSamplesToRead + i + j] = tmp[j * mp3->channels + k];
                     }
                 }
             }
@@ -230,15 +235,16 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
         } break;
         case WAVSTREAM_WAV: {
             unsigned int i, j, k;
+            drwav *wav = (drwav *)mCodec.mWav;
 
             for(i = 0; i < aSamplesToRead; i += 512){
                 float tmp[512 * MAX_CHANNELS];
                 unsigned int blockSize = (aSamplesToRead - i) > 512 ? 512 : aSamplesToRead - i;
-                offset += (unsigned int)drwav_read_pcm_frames_f32(mCodec.mWav, blockSize, tmp);
+                offset += (unsigned int)drwav_read_pcm_frames_f32(wav, blockSize, tmp);
 
                 for(j = 0; j < blockSize; j++){
                     for(k = 0; k < mChannels; k++){
-                        aBuffer[k * aSamplesToRead + i + j] = tmp[j * mCodec.mWav->channels + k];
+                        aBuffer[k * aSamplesToRead + i + j] = tmp[j * wav->channels + k];
                     }
                 }
             }
@@ -267,7 +273,7 @@ result WavStreamInstance::seek(double aSeconds, float *mScratch, unsigned int mS
         case WAVSTREAM_MP3:
             if(mCodec.mMp3){
                 drmp3_uint64 pos = (drmp3_uint64)floor(mBaseSamplerate * aSeconds);
-                if(!drmp3_seek_to_pcm_frame(mCodec.mMp3, pos))
+                if(!drmp3_seek_to_pcm_frame((drmp3 *)mCodec.mMp3, pos))
                     return INVALID_PARAMETER;
                 mOffset = (unsigned int)pos;
                 mStreamPosition = aSeconds;
@@ -278,7 +284,7 @@ result WavStreamInstance::seek(double aSeconds, float *mScratch, unsigned int mS
         case WAVSTREAM_WAV:
             if(mCodec.mWav){
                 drwav_uint64 pos = (drwav_uint64)floor(mBaseSamplerate * aSeconds);
-                if(!drwav_seek_to_pcm_frame(mCodec.mWav, pos))
+                if(!drwav_seek_to_pcm_frame((drwav *)mCodec.mWav, pos))
                     return INVALID_PARAMETER;
                 mOffset = (unsigned int)pos;
                 mStreamPosition = aSeconds;
@@ -299,12 +305,12 @@ result WavStreamInstance::rewind(){
             break;
         case WAVSTREAM_MP3:
             if(mCodec.mMp3){
-                drmp3_seek_to_pcm_frame(mCodec.mMp3, 0);
+                drmp3_seek_to_pcm_frame((drmp3 *)mCodec.mMp3, 0);
             }
             break;
         case WAVSTREAM_WAV:
             if(mCodec.mWav){
-                drwav_seek_to_pcm_frame(mCodec.mWav, 0);
+                drwav_seek_to_pcm_frame((drwav *)mCodec.mWav, 0);
             }
             break;
     }

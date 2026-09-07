@@ -30,12 +30,6 @@ freely, subject to the following restrictions:
 #include "soloud.h"
 
 struct stb_vorbis;
-#ifndef dr_mp3_h
-struct drmp3;
-#endif
-#ifndef dr_wav_h
-struct drwav;
-#endif
 
 namespace SoLoud {
 class WavStream;
@@ -47,8 +41,8 @@ class WavStreamInstance : public AudioSourceInstance {
     File *mFile;
     union codec {
         stb_vorbis *mOgg;
-        drmp3 *mMp3;
-        drwav *mWav;
+        void *mMp3;
+        void *mWav;
     } mCodec;
     unsigned int mOggFrameSize;
     unsigned int mOggFrameOffset;
