@@ -104,8 +104,13 @@ int DiskFile::eof(){
 }
 
 unsigned int MemoryFile::read(unsigned char *aDst, unsigned int aBytes){
-    if(mOffset + aBytes >= mDataLength)
-        aBytes = mDataLength - mOffset;
+    // Guard against corrupt/truncated/empty source data and against a stale mOffset that is already at or past the end of the buffer.
+    if(mDataPtr == NULL || mDataLength == 0 || mOffset >= mDataLength)
+        return 0;
+
+    unsigned int available = mDataLength - mOffset;
+    if(aBytes > available)
+        aBytes = available;
 
     memcpy(aDst, mDataPtr + mOffset, aBytes);
     mOffset += aBytes;
@@ -118,10 +123,20 @@ unsigned int MemoryFile::length(){
 }
 
 void MemoryFile::seek(int aOffset){
-    if(aOffset >= 0)
-        mOffset = aOffset;
-    else
-        mOffset = mDataLength + aOffset;
+    // Empty/corrupt source buffer: there is nowhere valid to seek to.
+    if(mDataLength == 0){
+        mOffset = 0;
+        return;
+    }
+
+    if(aOffset >= 0){
+        mOffset = (unsigned int)aOffset;
+    } else {
+        unsigned int negOffset = (unsigned int)(-aOffset);
+        mOffset = (negOffset > mDataLength) ? 0 : (mDataLength - negOffset);
+    }
+
+    // Clamp into [0, mDataLength - 1]. Using mDataLength - 1 here is safe because mDataLength == 0 was already handled above.
     if(mOffset > mDataLength - 1)
         mOffset = mDataLength - 1;
 }
@@ -215,82 +230,49 @@ int MemoryFile::eof(){
         return 1;
     return 0;
 }
-
-#ifdef __ANDROID__
-#if false
-	AndroidFile::AndroidFile( AAssetManager* AssetManager, const char* FileName )
-	{
-		Asset_ = AAssetManager_open( AssetManager, FileName, AASSET_MODE_UNKNOWN );
-		Position_ = 0;
-	}
-
-	AndroidFile::~AndroidFile()
-	{
-		if( Asset_ )
-		{
-			AAsset_close( Asset_ );
-		}
-	}
-
-	int AndroidFile::eof()
-	{
-		return Position_ >= length();
-	}
-
-	unsigned int AndroidFile::read( unsigned char *aDst, unsigned int aBytes )
-	{
-		AAsset_seek( Asset_, Position_, SEEK_SET );
-		AAsset_read( Asset_, aDst, aBytes );
-		Position_ += aBytes;
-		return aBytes;
-	}
-	
-	unsigned int AndroidFile::length()
-	{
-		return static_cast< unsigned int >( AAsset_getLength( Asset_ ) );
-	}
-
-	void AndroidFile::seek( int aOffset )
-	{
-		Position_ = aOffset;
-	}
-
-	unsigned int AndroidFile::pos()
-	{
-		return Position_;
-	}
-#endif
-#endif
 } // namespace SoLoud
 
 extern "C" {
 int Soloud_Filehack_fgetc(Soloud_Filehack *f){
-    SoLoud::File *fp = (SoLoud::File *)f;
-    if(fp->eof())
+    if(f == NULL)
         return EOF;
-    return fp->read8();
+    SoLoud::File *fp = (SoLoud::File *)f;
+    // Don't trust a pre-read eof()
+    if(fp->pos() >= fp->length())
+        return EOF;
+    unsigned char b = 0;
+    if(fp->read(&b, 1) != 1)
+        return EOF;
+    return b;
 }
 
 int Soloud_Filehack_fread(void *dst, int s, int c, Soloud_Filehack *f){
+    if(f == NULL || s <= 0 || c <= 0)
+        return 0;
     SoLoud::File *fp = (SoLoud::File *)f;
-    return fp->read((unsigned char *)dst, s * c) / s;
+    return fp->read((unsigned char *)dst, (unsigned int)(s * c)) / s;
 }
 
 int Soloud_Filehack_fseek(Soloud_Filehack *f, int idx, int base){
     if(f == NULL)
-        return 0;
+        return -1;
     SoLoud::File *fp = (SoLoud::File *)f;
+    unsigned int len = fp->length();
+
+    // Compute the target offset as a signed 64-bit value first so we can validate it against the real file/buffer length
+    long long target;
     switch(base){
-        case SEEK_CUR:
-            fp->seek(fp->pos() + idx);
-            break;
-        case SEEK_END:
-            fp->seek(fp->length() + idx);
-            break;
-        default:
-            fp->seek(idx);
+        case SEEK_CUR: target = (long long)fp->pos() + idx; break;
+        case SEEK_END: target = (long long)len + idx; break;
+        default:       target = idx; break;
     }
-    return 0;
+
+    if(target < 0 || target > (long long)len)
+        return -1; // mimic real fseek()'s failure return for an invalid offset
+
+    fp->seek((int)target);
+    // Confirm the seek actually landed where requested.
+    return (fp->pos() == (unsigned int)target) ? 0 : -1;
 }
 
 int Soloud_Filehack_ftell(Soloud_Filehack *f){
