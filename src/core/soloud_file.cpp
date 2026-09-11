@@ -136,9 +136,9 @@ void MemoryFile::seek(int aOffset){
         mOffset = (negOffset > mDataLength) ? 0 : (mDataLength - negOffset);
     }
 
-    // Clamp into [0, mDataLength - 1]. Using mDataLength - 1 here is safe because mDataLength == 0 was already handled above.
-    if(mOffset > mDataLength - 1)
-        mOffset = mDataLength - 1;
+    // Clamp into [0, mDataLength]. mDataLength itself (EOF) is a valid position.
+    if(mOffset > mDataLength)
+        mOffset = mDataLength;
 }
 
 unsigned int MemoryFile::pos(){
