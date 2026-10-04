@@ -28,8 +28,10 @@ freely, subject to the following restrictions:
 #include <stdlib.h>
 #include <string.h>
 
+#if !SOLOUD_OGG_ONLY
 #include "dr_mp3.h"
 #include "dr_wav.h"
+#endif
 #include "soloud.h"
 #include "soloud_file.h"
 #include "stb_vorbis.h"
@@ -83,6 +85,7 @@ Wav::~Wav(){
 
 #define MAKEDWORD(a, b, c, d) (((d) << 24) | ((c) << 16) | ((b) << 8) | (a))
 
+#if !SOLOUD_OGG_ONLY
 result Wav::loadwav(MemoryFile *aReader){
     drwav decoder;
 
@@ -117,6 +120,7 @@ result Wav::loadwav(MemoryFile *aReader){
 
     return SO_NO_ERROR;
 }
+#endif
 
 result Wav::loadogg(MemoryFile *aReader){
     int e = 0;
@@ -194,6 +198,7 @@ result Wav::loadogg(MemoryFile *aReader){
     return 0;
 }
 
+#if !SOLOUD_OGG_ONLY
 result Wav::loadmp3(MemoryFile *aReader){
     drmp3 decoder;
 
@@ -229,6 +234,7 @@ result Wav::loadmp3(MemoryFile *aReader){
 
     return SO_NO_ERROR;
 }
+#endif
 
 result Wav::testAndLoadFile(MemoryFile *aReader){
     delete[] mData;
@@ -238,11 +244,12 @@ result Wav::testAndLoadFile(MemoryFile *aReader){
     int tag = aReader->read32();
     if(tag == MAKEDWORD('O', 'g', 'g', 'S')){
         return loadogg(aReader);
-
+#if !SOLOUD_OGG_ONLY
     }else if(tag == MAKEDWORD('R', 'I', 'F', 'F')){
         return loadwav(aReader);
     }else if(loadmp3(aReader) == SO_NO_ERROR){
         return SO_NO_ERROR;
+#endif
     }
 
     return FILE_LOAD_FAILED;

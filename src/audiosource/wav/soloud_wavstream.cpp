@@ -28,14 +28,17 @@ freely, subject to the following restrictions:
 #include <stdlib.h>
 #include <string.h>
 
+#if !SOLOUD_OGG_ONLY
 #include "dr_mp3.h"
 #include "dr_wav.h"
+#endif
 #include "soloud.h"
 #include "soloud_file.h"
 #include "stb_vorbis.h"
 
 namespace SoLoud {
 
+#if !SOLOUD_OGG_ONLY
 size_t drmp3_read_func(void *pUserData, void *pBufferOut, size_t bytesToRead){
     File *fp = (File *)pUserData;
     return fp->read((unsigned char *)pBufferOut, (unsigned int)bytesToRead);
@@ -73,6 +76,7 @@ drwav_bool32 drwav_seek_func(void *pUserData, int offset, drwav_seek_origin orig
     fp->seek(offset);
     return 1;
 }
+#endif
 
 WavStreamInstance::WavStreamInstance(WavStream *aParent){
     mParent = aParent;
@@ -100,17 +104,7 @@ WavStreamInstance::WavStreamInstance(WavStream *aParent){
     }
 
     if(mFile){
-        if(mParent->mFiletype == WAVSTREAM_WAV){
-            drwav *wav = new drwav;
-            mCodec.mWav = wav;
-            if(!drwav_init(wav, drwav_read_func, drwav_seek_func, drwav_tell_func, (void *)mFile, NULL)){
-                delete wav;
-                mCodec.mWav = 0;
-                if(mFile != mParent->mStreamFile)
-                    delete mFile;
-                mFile = 0;
-            }
-        }else if(mParent->mFiletype == WAVSTREAM_OGG){
+        if(mParent->mFiletype == WAVSTREAM_OGG){
             int e;
 
             mCodec.mOgg = stb_vorbis_open_file((Soloud_Filehack *)mFile, 0, &e, 0);
@@ -123,6 +117,17 @@ WavStreamInstance::WavStreamInstance(WavStream *aParent){
             mOggFrameSize = 0;
             mOggFrameOffset = 0;
             mOggOutputs = 0;
+#if !SOLOUD_OGG_ONLY
+        }else if(mParent->mFiletype == WAVSTREAM_WAV){
+            drwav *wav = new drwav;
+            mCodec.mWav = wav;
+            if(!drwav_init(wav, drwav_read_func, drwav_seek_func, drwav_tell_func, (void *)mFile, NULL)){
+                delete wav;
+                mCodec.mWav = 0;
+                if(mFile != mParent->mStreamFile)
+                    delete mFile;
+                mFile = 0;
+            }
         }else if(mParent->mFiletype == WAVSTREAM_MP3){
             drmp3 *mp3 = new drmp3;
             mCodec.mMp3 = mp3;
@@ -133,6 +138,7 @@ WavStreamInstance::WavStreamInstance(WavStream *aParent){
                     delete mFile;
                 mFile = 0;
             }
+#endif
         }else{
             if(mFile != mParent->mStreamFile)
                 delete mFile;
@@ -149,6 +155,7 @@ WavStreamInstance::~WavStreamInstance(){
                 stb_vorbis_close(mCodec.mOgg);
             }
             break;
+#if !SOLOUD_OGG_ONLY
         case WAVSTREAM_MP3:
             if(mCodec.mMp3){
                 drmp3 *mp3 = (drmp3 *)mCodec.mMp3;
@@ -165,6 +172,7 @@ WavStreamInstance::~WavStreamInstance(){
                 mCodec.mWav = 0;
             }
             break;
+#endif
     }
     if(mFile != mParent->mStreamFile){
         delete mFile;
@@ -192,6 +200,7 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
     if(mFile == NULL)
         return 0;
     switch(mParent->mFiletype){
+#if !SOLOUD_OGG_ONLY
         case WAVSTREAM_MP3: {
             unsigned int i, j, k;
             drmp3 *mp3 = (drmp3 *)mCodec.mMp3;
@@ -210,6 +219,7 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
             mOffset += offset;
             return offset;
         } break;
+#endif
         case WAVSTREAM_OGG: {
             if(mOggFrameOffset < mOggFrameSize){
                 int b = getOggData(mOggOutputs, aBuffer, aSamplesToRead, aBufferSize, mOggFrameSize, mOggFrameOffset, mChannels);
@@ -233,6 +243,7 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
                 }
             }
         } break;
+#if !SOLOUD_OGG_ONLY
         case WAVSTREAM_WAV: {
             unsigned int i, j, k;
             drwav *wav = (drwav *)mCodec.mWav;
@@ -251,6 +262,7 @@ unsigned int WavStreamInstance::getAudio(float *aBuffer, unsigned int aSamplesTo
             mOffset += offset;
             return offset;
         } break;
+#endif
     }
     return aSamplesToRead;
 }
@@ -270,6 +282,7 @@ result WavStreamInstance::seek(double aSeconds, float *mScratch, unsigned int mS
             }
             break;
 
+#if !SOLOUD_OGG_ONLY
         case WAVSTREAM_MP3:
             if(mCodec.mMp3){
                 drmp3_uint64 pos = (drmp3_uint64)floor(mBaseSamplerate * aSeconds);
@@ -291,6 +304,7 @@ result WavStreamInstance::seek(double aSeconds, float *mScratch, unsigned int mS
                 return SO_NO_ERROR;
             }
             break;
+#endif
     }
 
     return AudioSourceInstance::seek(aSeconds, mScratch, mScratchSize);
@@ -303,6 +317,7 @@ result WavStreamInstance::rewind(){
                 stb_vorbis_seek_start(mCodec.mOgg);
             }
             break;
+#if !SOLOUD_OGG_ONLY
         case WAVSTREAM_MP3:
             if(mCodec.mMp3){
                 drmp3_seek_to_pcm_frame((drmp3 *)mCodec.mMp3, 0);
@@ -313,6 +328,7 @@ result WavStreamInstance::rewind(){
                 drwav_seek_to_pcm_frame((drwav *)mCodec.mWav, 0);
             }
             break;
+#endif
     }
     mOffset = 0;
     mStreamPosition = 0.0f;
@@ -342,6 +358,7 @@ WavStream::~WavStream(){
 
 #define MAKEDWORD(a, b, c, d) (((d) << 24) | ((c) << 16) | ((b) << 8) | (a))
 
+#if !SOLOUD_OGG_ONLY
 result WavStream::loadwav(File *fp){
     fp->seek(0);
     drwav decoder;
@@ -366,6 +383,7 @@ result WavStream::loadwav(File *fp){
 
     return SO_NO_ERROR;
 }
+#endif
 
 result WavStream::loadogg(File *fp){
     fp->seek(0);
@@ -389,12 +407,13 @@ result WavStream::loadogg(File *fp){
     return 0;
 }
 
+#if !SOLOUD_OGG_ONLY
 result WavStream::loadmp3(File *fp){
     fp->seek(0);
     drmp3 decoder;
     if(!drmp3_init(&decoder, drmp3_read_func, drmp3_seek_func, drmp3_tell_func, NULL, (void *)fp, NULL))
         return FILE_LOAD_FAILED;
-    
+
     if(decoder.channels > MAX_CHANNELS){
         drmp3_uninit(&decoder);
         return FILE_LOAD_FAILED;
@@ -414,6 +433,7 @@ result WavStream::loadmp3(File *fp){
 
     return SO_NO_ERROR;
 }
+#endif
 
 result WavStream::load(const char *aFilename){
     delete[] mFilename;
@@ -532,10 +552,12 @@ result WavStream::parse(File *aFile){
     int res = SO_NO_ERROR;
     if(tag == MAKEDWORD('O', 'g', 'g', 'S')){
         res = loadogg(aFile);
+#if !SOLOUD_OGG_ONLY
     }else if(tag == MAKEDWORD('R', 'I', 'F', 'F')){
         res = loadwav(aFile);
     }else if(loadmp3(aFile) == SO_NO_ERROR){
         res = SO_NO_ERROR;
+#endif
     }else{
         res = FILE_LOAD_FAILED;
     }

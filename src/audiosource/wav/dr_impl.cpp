@@ -1,3 +1,4 @@
+#if !SOLOUD_OGG_ONLY
 #define DR_MP3_IMPLEMENTATION
 #define DR_MP3_NO_STDIO
 #define DR_MP3_FLOAT_OUTPUT
@@ -6,3 +7,4 @@
 #define DR_WAV_IMPLEMENTATION
 #define DR_WAV_NO_STDIO
 #include "dr_wav.h"
+#endif
