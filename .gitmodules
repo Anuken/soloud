@@ -1,3 +1,0 @@
-[submodule "ext/libmodplug"]
-	path = ext/libmodplug
-	url = https://github.com/jarikomppa/libmodplug.git
