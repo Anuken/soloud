@@ -25,10 +25,16 @@ esac
 cat > "$OUT/main.cpp" <<'EOF'
 #include <stdio.h>
 #include <string.h>
+#include <chrono>
 #include "soloud.h"
 #include "soloud_thread.h"
 #include "soloud_wav.h"
 #include "soloud_wavstream.h"
+
+static double nowMs(){
+    using namespace std::chrono;
+    return duration<double, std::milli>(steady_clock::now().time_since_epoch()).count();
+}
 
 static void play(SoLoud::Soloud &aSoloud, SoLoud::AudioSource &aSrc, const char *aName, double aLength){
     printf("%s: length %.3f s, playing...\n", aName, aLength);
@@ -55,7 +61,9 @@ int main(){
     int rc = 0;
 
     SoLoud::Wav wav;
+    double t0 = nowMs();
     res = wav.load(path);
+    printf("Wav load time: %.3f ms\n", nowMs() - t0);
     if(res == SoLoud::SO_NO_ERROR)
         play(soloud, wav, "Wav", wav.getLength());
     else{
@@ -64,7 +72,9 @@ int main(){
     }
 
     SoLoud::WavStream stream;
+    t0 = nowMs();
     res = stream.load(path);
+    printf("WavStream load time: %.3f ms\n", nowMs() - t0);
     if(res == SoLoud::SO_NO_ERROR)
         play(soloud, stream, "WavStream", stream.getLength());
     else{
@@ -78,10 +88,10 @@ int main(){
 EOF
 
 echo "Compiling..."
-"$CC" -c -O2 "${DEFS[@]}" -I"$ROOT/include" -I"$ROOT/src/audiosource/wav" \
+"$CC" -c -O3 "${DEFS[@]}" -I"$ROOT/include" -I"$ROOT/src/audiosource/wav" \
     "$ROOT/src/audiosource/wav/stb_vorbis.c" -o "$OUT/stb_vorbis.o"
 
-"$CXX" -O2 "${DEFS[@]}" \
+"$CXX" -O3 "${DEFS[@]}" \
     -I"$ROOT/include" -I"$ROOT/src/audiosource/wav" -I"$ROOT/src/backend/miniaudio" \
     "$OUT/main.cpp" \
     "$ROOT"/src/core/*.cpp \

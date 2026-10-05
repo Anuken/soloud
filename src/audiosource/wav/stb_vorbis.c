@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.22 - public domain
+// Ogg Vorbis audio decoder - v1.22 (security-hardened, see 1.22.1 below) - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -36,6 +36,14 @@
 //    AnthoFoxo          github:morlat       Gabriel Ravier
 //
 // Partial history:
+//    1.22.1  - local hardening of 1.22 against malformed/malicious files: header comments are
+//              now parsed and discarded (vendor/comment_list stay empty); setup allocations take
+//              size_t, are overflow-checked and capped (STB_VORBIS_MAX_SETUP_BYTES); Mapping
+//              submap arrays sized 16; codebook size/lookup checks (entries*dimensions bound as in
+//              libvorbis, total-entries cap against CPU-time bombs); DECODE macro no longer
+//              indexes a NULL sorted_values; lookup1_values has no out-of-range float->int casts.
+//              Covers CVE-2023-45675..45682, CVE-2023-47212 and the setup_free/start_decoder
+//              crashes reported in 2026.
 //    1.22    - 2021-07-11 - various small fixes
 //    1.21    - 2021-07-02 - fix bug for files with no comments
 //    1.20    - 2020-07-11 - several small fixes
@@ -757,8 +765,8 @@ typedef struct
    uint16 coupling_steps;
    MappingChannel *chan;
    uint8  submaps;
-   uint8  submap_floor[15]; // varies
-   uint8  submap_residue[15]; // varies
+   uint8  submap_floor[16]; // varies; submaps can be 1..16
+   uint8  submap_residue[16]; // varies
 } Mapping;
 
 typedef struct
@@ -949,9 +957,32 @@ static void *make_block_array(void *mem, int count, int size)
    return p;
 }
 
-static void *setup_malloc(vorb *f, int sz)
+// Hard limit on the total memory a single stream's setup header may ask for. Real files need well
+// under 2MB; this only exists so a malicious header can't make us allocate gigabytes.
+#ifndef STB_VORBIS_MAX_SETUP_BYTES
+#define STB_VORBIS_MAX_SETUP_BYTES (64u*1024u*1024u)
+#endif
+
+// Likewise for codebook entries summed over all codebooks. An ordered codebook can declare millions of
+// entries in a few bytes, and building its tables costs time proportional to the entry count.
+// Real files use a few thousand entries in total.
+#ifndef STB_VORBIS_MAX_TOTAL_CODEBOOK_ENTRIES
+#define STB_VORBIS_MAX_TOTAL_CODEBOOK_ENTRIES (1u<<21)
+#endif
+
+// a*b, or 0 if the result doesn't fit in an int (0 makes the allocators below fail)
+static size_t mul_size(size_t a, size_t b)
 {
-   sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
+   if (a && b > (size_t) INT_MAX / a) return 0;
+   return a * b;
+}
+
+static void *setup_malloc(vorb *f, size_t sz_in)
+{
+   int sz;
+   if (sz_in == 0 || sz_in > (size_t) (INT_MAX - 7)) return NULL;
+   sz = ((int) sz_in + 7) & ~7; // round up to nearest 8 for alignment of future allocs.
+   if ((unsigned int) sz > STB_VORBIS_MAX_SETUP_BYTES || f->setup_memory_required > STB_VORBIS_MAX_SETUP_BYTES - (unsigned int) sz) return NULL;
    f->setup_memory_required += sz;
    if (f->alloc.alloc_buffer) {
       void *p = (char *) f->alloc.alloc_buffer + f->setup_offset;
@@ -959,7 +990,7 @@ static void *setup_malloc(vorb *f, int sz)
       f->setup_offset += sz;
       return p;
    }
-   return sz ? malloc(sz) : NULL;
+   return malloc(sz);
 }
 
 static void setup_free(vorb *f, void *p)
@@ -968,9 +999,12 @@ static void setup_free(vorb *f, void *p)
    free(p);
 }
 
-static void *setup_temp_malloc(vorb *f, int sz)
+static void *setup_temp_malloc(vorb *f, size_t sz_in)
 {
-   sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
+   int sz;
+   if (sz_in == 0) sz_in = 1; // zero-entry codebooks are accepted, so don't fail on a zero-size request
+   if (sz_in > (size_t) (INT_MAX - 7) || sz_in > STB_VORBIS_MAX_SETUP_BYTES) return NULL;
+   sz = ((int) sz_in + 7) & ~7; // round up to nearest 8 for alignment of future allocs.
    if (f->alloc.alloc_buffer) {
       if (f->temp_offset - sz < f->setup_offset) return NULL;
       f->temp_offset -= sz;
@@ -1242,12 +1276,16 @@ static int vorbis_validate(uint8 *data)
 // (formula implied by specification)
 static int lookup1_values(int entries, int dim)
 {
-   int r = (int) floor(exp((float) log((float) entries) / dim));
-   if ((int) floor(pow((float) r+1, dim)) <= entries)   // (int) cast for MinGW warning;
-      ++r;                                              // floor() to avoid _ftol() when non-CRT
-   if (pow((float) r+1, dim) <= entries)
+   // done in double with no float->int casts of huge values (pow() can return inf for large dim)
+   int r;
+   double e = (double) entries;
+   if (entries <= 0 || dim <= 0) return -1;
+   r = (int) floor(exp(log(e) / dim)); // result is in [0, entries], so the cast is safe
+   if (pow((double) r + 1, dim) <= e)
+      ++r;
+   if (pow((double) r + 1, dim) <= e)
       return -1;
-   if ((int) floor(pow((float) r, dim)) > entries)
+   if (pow((double) r, dim) > e)
       return -1;
    return r;
 }
@@ -1581,14 +1619,30 @@ static int get8_packet(vorb *f)
    return x;
 }
 
-static int get32_packet(vorb *f)
+// Reads a little-endian 32-bit value from the current packet. Returns FALSE (without a partial
+// value) if the packet ends first.
+static int get32_packet_checked(vorb *f, uint32 *out)
 {
-   uint32 x;
-   x = get8_packet(f);
-   x += get8_packet(f) << 8;
-   x += get8_packet(f) << 16;
-   x += (uint32) get8_packet(f) << 24;
-   return x;
+   uint32 x = 0;
+   int i;
+   for (i=0; i < 4; ++i) {
+      int b = get8_packet(f);
+      if (b == EOP) return FALSE;
+      x |= (uint32) b << (8*i);
+   }
+   *out = x;
+   return TRUE;
+}
+
+// Discards n bytes of the current packet. Stops (returning FALSE) at the end of the packet, so a
+// huge declared length costs at most the real packet size.
+static int skip_packet_bytes(vorb *f, uint32 n)
+{
+   while (n) {
+      if (get8_packet(f) == EOP) return FALSE;
+      --n;
+   }
+   return TRUE;
 }
 
 static void flush_packet(vorb *f)
@@ -1755,7 +1809,7 @@ static int codebook_decode_scalar(vorb *f, Codebook *c)
 
 #define DECODE(var,f,c)                                       \
    DECODE_RAW(var,f,c)                                        \
-   if (c->sparse) var = c->sorted_values[var];
+   if (c->sparse && var >= 0) var = c->sorted_values[var];
 
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
   #define DECODE_VQ(var,f,c)   DECODE_RAW(var,f,c)
@@ -3650,32 +3704,22 @@ static int start_decoder(vorb *f)
    if (get8_packet(f) != VORBIS_packet_comment)            return error(f, VORBIS_invalid_setup);
    for (i=0; i < 6; ++i) header[i] = get8_packet(f);
    if (!vorbis_validate(header))                    return error(f, VORBIS_invalid_setup);
-   //file vendor
-   len = get32_packet(f);
-   f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
-   if (f->vendor == NULL)                           return error(f, VORBIS_outofmem);
-   for(i=0; i < len; ++i) {
-      f->vendor[i] = get8_packet(f);
-   }
-   f->vendor[len] = (char)'\0';
-   //user comments
-   f->comment_list_length = get32_packet(f);
+   // Vendor string and user comments are validated for length and then discarded; nothing in the
+   // decoder needs them and parsing them is a classic source of bugs. f->vendor/comment_list stay
+   // empty (NULL / 0).
+   f->vendor = NULL;
    f->comment_list = NULL;
-   if (f->comment_list_length > 0)
+   f->comment_list_length = 0;
    {
-      f->comment_list = (char**) setup_malloc(f, sizeof(char*) * (f->comment_list_length));
-      if (f->comment_list == NULL)                  return error(f, VORBIS_outofmem);
-   }
-
-   for(i=0; i < f->comment_list_length; ++i) {
-      len = get32_packet(f);
-      f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
-      if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
-
-      for(j=0; j < len; ++j) {
-         f->comment_list[i][j] = get8_packet(f);
+      uint32 vendor_len, comment_count, comment_len;
+      if (!get32_packet_checked(f, &vendor_len))    return error(f, VORBIS_invalid_setup);
+      if (!skip_packet_bytes(f, vendor_len))        return error(f, VORBIS_invalid_setup);
+      if (!get32_packet_checked(f, &comment_count)) return error(f, VORBIS_invalid_setup);
+      // every comment needs at least 4 bytes of the packet, so this loop is bounded by the packet size
+      for (; comment_count; --comment_count) {
+         if (!get32_packet_checked(f, &comment_len)) return error(f, VORBIS_invalid_setup);
+         if (!skip_packet_bytes(f, comment_len))     return error(f, VORBIS_invalid_setup);
       }
-      f->comment_list[i][len] = (char)'\0';
    }
 
    // framing_flag
@@ -3737,6 +3781,14 @@ static int start_decoder(vorb *f)
       c->sparse = ordered ? 0 : get_bits(f,1);
 
       if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
+      // same bound libvorbis applies: keeps entries*dimensions (and every table derived from it) sane
+      if (ilog(c->dimensions) + ilog(c->entries) > 24) return error(f, VORBIS_invalid_setup);
+      {
+         unsigned int total_entries = (unsigned int) c->entries;
+         int q;
+         for (q=0; q < i; ++q) total_entries += (unsigned int) f->codebooks[q].entries;
+         if (total_entries > STB_VORBIS_MAX_TOTAL_CODEBOOK_ENTRIES) return error(f, VORBIS_invalid_setup);
+      }
 
       if (c->sparse)
          lengths = (uint8 *) setup_temp_malloc(f, c->entries);
@@ -3859,14 +3911,17 @@ static int start_decoder(vorb *f)
             if (values < 0) return error(f, VORBIS_invalid_setup);
             c->lookup_values = (uint32) values;
          } else {
+            // entries is up to 2^24 and dimensions up to 2^16, so this product can overflow an int
+            if (c->dimensions && (unsigned int) c->entries > (unsigned int) INT_MAX / c->dimensions) return error(f, VORBIS_invalid_setup);
             c->lookup_values = c->entries * c->dimensions;
          }
          if (c->lookup_values == 0) return error(f, VORBIS_invalid_setup);
-         mults = (uint16 *) setup_temp_malloc(f, sizeof(mults[0]) * c->lookup_values);
+         mults = (uint16 *) setup_temp_malloc(f, mul_size(sizeof(mults[0]), c->lookup_values));
          if (mults == NULL) return error(f, VORBIS_outofmem);
          for (j=0; j < (int) c->lookup_values; ++j) {
             int q = get_bits(f, c->value_bits);
-            if (q == EOP) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
+            // get_bits() returns 0 (never EOP) after the packet ends, so detect truncation via valid_bits
+            if (f->valid_bits < 0) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
             mults[j] = q;
          }
 
@@ -3877,9 +3932,9 @@ static int start_decoder(vorb *f)
             // pre-expand the lookup1-style multiplicands, to avoid a divide in the inner loop
             if (sparse) {
                if (c->sorted_entries == 0) goto skip;
-               c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->sorted_entries * c->dimensions);
+               c->multiplicands = (codetype *) setup_malloc(f, mul_size(mul_size(sizeof(c->multiplicands[0]), c->sorted_entries), c->dimensions));
             } else
-               c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->entries        * c->dimensions);
+               c->multiplicands = (codetype *) setup_malloc(f, mul_size(mul_size(sizeof(c->multiplicands[0]), c->entries), c->dimensions));
             if (c->multiplicands == NULL) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             len = sparse ? c->sorted_entries : c->entries;
             for (j=0; j < len; ++j) {
@@ -3907,7 +3962,7 @@ static int start_decoder(vorb *f)
          {
             float last=0;
             CHECK(f);
-            c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
+            c->multiplicands = (codetype *) setup_malloc(f, mul_size(sizeof(c->multiplicands[0]), c->lookup_values));
             if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             for (j=0; j < (int) c->lookup_values; ++j) {
                float val = mults[j] * c->delta_value + c->minimum_value + last;
@@ -4210,12 +4265,6 @@ static int start_decoder(vorb *f)
 static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
-
-   setup_free(p, p->vendor);
-   for (i=0; i < p->comment_list_length; ++i) {
-      setup_free(p, p->comment_list[i]);
-   }
-   setup_free(p, p->comment_list);
 
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {

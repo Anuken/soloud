@@ -27,6 +27,8 @@ freely, subject to the following restrictions:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <new>
 
 #if !SOLOUD_OGG_ONLY
 #include "dr_mp3.h"
@@ -122,80 +124,121 @@ result Wav::loadwav(MemoryFile *aReader){
 }
 #endif
 
+// Hard ceiling on the decoded size of one ogg file, in bytes of float PCM (512MB is ~25 minutes of stereo audio at 44.1kHz
+// Override with -DSOLOUD_OGG_MAX_DECODE_BYTES=...
+#ifndef SOLOUD_OGG_MAX_DECODE_BYTES
+#define SOLOUD_OGG_MAX_DECODE_BYTES (512u * 1024u * 1024u)
+#endif
+
 result Wav::loadogg(MemoryFile *aReader){
+    // stb_vorbis takes an int length
+    if(aReader->length() > (unsigned int)INT_MAX){
+        return FILE_LOAD_FAILED;
+    }
+
     int e = 0;
-    stb_vorbis *vorbis = 0;
-    vorbis = stb_vorbis_open_memory(aReader->getMemPtr(), aReader->length(), &e, 0);
+    stb_vorbis *vorbis = stb_vorbis_open_memory(aReader->getMemPtr(), (int)aReader->length(), &e, 0);
 
     if(0 == vorbis){
         return FILE_LOAD_FAILED;
     }
 
     stb_vorbis_info info = stb_vorbis_get_info(vorbis);
-    mBaseSamplerate = (float)info.sample_rate;
-    int samples = stb_vorbis_stream_length_in_samples(vorbis);
-
-    if(info.channels > MAX_CHANNELS){
-        mChannels = MAX_CHANNELS;
-    }else{
-        mChannels = info.channels;
+    const float samplerate = (float)info.sample_rate;
+    const unsigned int channels = (unsigned int)(info.channels > MAX_CHANNELS ? MAX_CHANNELS : info.channels);
+    if(channels == 0){
+        stb_vorbis_close(vorbis);
+        return FILE_LOAD_FAILED;
     }
-    if(samples < 0)
-        samples = 0;
 
-    // Cap the header-reported sample count before the upfront alloc so a corrupt/malicious header can't force a huge or failing allocation
-    const size_t kMaxInitialAllocBytes = 512u * 1024u * 1024u; // 512MB uncompressed (~25 min of audio - very stupid amount for a single wav)
-    unsigned int chDiv = (unsigned int)(mChannels > 0 ? mChannels : 1);
-    size_t maxInitialSamples = kMaxInitialAllocBytes / (sizeof(float) * chDiv);
-    unsigned int capacity = (unsigned int)samples;
-    if((size_t)capacity > maxInitialSamples)
-        capacity = (unsigned int)maxInitialSamples;
+    unsigned long long maxFrames = (unsigned long long)SOLOUD_OGG_MAX_DECODE_BYTES / (sizeof(float) * channels);
+    if(maxFrames > 0xFFFFFFFFull) // mSampleCount is an unsigned int
+        maxFrames = 0xFFFFFFFFull;
+    if(maxFrames * channels * sizeof(float) > (unsigned long long)(size_t)-1) // keep the byte count representable (32-bit builds)
+        maxFrames = (unsigned long long)(size_t)-1 / (channels * sizeof(float));
 
-    mData = new float[(size_t)capacity * mChannels];
-    samples = 0;
-    bool grew = false;
-    while(1){
-        float **outputs;
+    // Start with the length from the header so ordinary files decode with one allocation and no copying, but never trust it beyond the ceiling. 
+    // If it turns out to be too small we grow below, and if it is too large we repack to the exact decoded size at the end.
+    unsigned long long capacity = stb_vorbis_stream_length_in_samples(vorbis);
+    if(capacity > maxFrames)
+        capacity = maxFrames;
+    if(capacity == 0)
+        capacity = 4096;
+
+    float *data = new(std::nothrow) float[(size_t)(capacity * channels)];
+    result error = SO_NO_ERROR;
+    if(data == NULL){
+        error = OUT_OF_MEMORY;
+    }
+
+    unsigned long long frames = 0;
+    while(error == SO_NO_ERROR){
+        float **outputs = NULL;
         int n = stb_vorbis_get_frame_float(vorbis, NULL, &outputs);
         if(n <= 0 || outputs == NULL){
             break;
         }
 
-        if((unsigned int)samples + (unsigned int)n > capacity){
-            unsigned int newCapacity = ((unsigned int)samples + (unsigned int)n) * 2; // grow with headroom instead of overflowing mData when actual decoded length exceeds the header-reported length
-            float *newData = new float[(size_t)newCapacity * mChannels];
-            unsigned int ch2;
-            for(ch2 = 0; ch2 < (unsigned int)mChannels; ch2++)
-                memcpy(newData + ch2 * newCapacity, mData + ch2 * capacity, sizeof(float) * samples);
-            delete[] mData;
-            mData = newData;
+        if(frames + (unsigned long long)n > capacity){
+            // The decoded length exceeds what the header promised; grow, with headroom.
+            unsigned long long newCapacity = capacity * 2;
+            if(newCapacity < frames + (unsigned long long)n)
+                newCapacity = frames + (unsigned long long)n;
+            if(newCapacity > maxFrames)
+                newCapacity = maxFrames;
+            if(frames + (unsigned long long)n > newCapacity){
+                error = FILE_LOAD_FAILED; // over the ceiling
+                break;
+            }
+            float *grown = new(std::nothrow) float[(size_t)(newCapacity * channels)];
+            if(grown == NULL){
+                error = OUT_OF_MEMORY;
+                break;
+            }
+            unsigned int ch;
+            for(ch = 0; ch < channels; ch++)
+                memcpy(grown + (size_t)(ch * newCapacity), data + (size_t)(ch * capacity), sizeof(float) * (size_t)frames);
+            delete[] data;
+            data = grown;
             capacity = newCapacity;
-            grew = true;
         }
 
         unsigned int ch;
-        for(ch = 0; ch < mChannels; ch++)
-            memcpy(mData + samples + capacity * ch, outputs[ch], sizeof(float) * n);
-
-        samples += n;
-    }
-
-    // Only shrink to exact size if we actually grew past the initial capacity; ordinary files skip this and just use capacity as mSampleCount, same cost as the original code.
-    if(grew && (unsigned int)samples != capacity){
-        float *exactData = new float[(size_t)samples * mChannels]; // reallocate to exact size so per-channel stride equals mSampleCount, matching what WavInstance::getAudio assumes
-        unsigned int ch3;
-        for(ch3 = 0; ch3 < (unsigned int)mChannels; ch3++)
-            memcpy(exactData + ch3 * samples, mData + ch3 * capacity, sizeof(float) * samples);
-        delete[] mData;
-        mData = exactData;
-        mSampleCount = (unsigned int)samples;
-    } else {
-        mSampleCount = capacity;
+        for(ch = 0; ch < channels; ch++)
+            memcpy(data + (size_t)(ch * capacity + frames), outputs[ch], sizeof(float) * (size_t)n);
+        frames += (unsigned long long)n;
     }
 
     stb_vorbis_close(vorbis);
 
-    return 0;
+    if(error == SO_NO_ERROR && frames == 0)
+        error = FILE_LOAD_FAILED;
+    if(error != SO_NO_ERROR){
+        delete[] data;
+        return error;
+    }
+
+    // WavInstance::getAudio assumes the per-channel stride equals mSampleCount, and the buffer must not expose unwritten memory, so repack to the exact decoded size if capacity differs.
+    if(frames != capacity){
+        float *exact = new(std::nothrow) float[(size_t)(frames * channels)];
+        if(exact == NULL){
+            delete[] data;
+            return OUT_OF_MEMORY;
+        }
+        unsigned int ch;
+        for(ch = 0; ch < channels; ch++)
+            memcpy(exact + (size_t)(ch * frames), data + (size_t)(ch * capacity), sizeof(float) * (size_t)frames);
+        delete[] data;
+        data = exact;
+    }
+
+    delete[] mData;
+    mData = data;
+    mSampleCount = (unsigned int)frames;
+    mChannels = channels;
+    mBaseSamplerate = samplerate;
+
+    return SO_NO_ERROR;
 }
 
 #if !SOLOUD_OGG_ONLY
