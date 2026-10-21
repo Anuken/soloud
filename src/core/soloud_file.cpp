@@ -51,30 +51,82 @@ unsigned int File::read32(){
     return d;
 }
 
-DiskFile::DiskFile(FILE *fp)
-    : mFileHandle(fp){
+DiskFile::DiskFile(FILE *fp){
+    init(fp);
+}
+
+void DiskFile::init(FILE *fp){
+    mFileHandle = fp;
+    mLength = -1;
+    mPos = mFilePos = fp ? (unsigned int)ftell(fp) : 0;
+    mBufferStart = mBufferLength = 0;
+    mEof = false;
 }
 
 unsigned int DiskFile::read(unsigned char *aDst, unsigned int aBytes){
-    return (unsigned int)fread(aDst, 1, aBytes, mFileHandle);
+    if(!mFileHandle)
+        return 0;
+    unsigned int total = 0;
+    while(total < aBytes){
+        if(mPos >= mBufferStart && mPos < mBufferStart + mBufferLength){
+            unsigned int offset = mPos - mBufferStart;
+            unsigned int count = mBufferLength - offset;
+            if(count > aBytes - total)
+                count = aBytes - total;
+            memcpy(aDst + total, mBuffer + offset, count);
+            total += count;
+            mPos += count;
+            continue;
+        }
+
+        if(mFilePos != mPos){
+            if(fseek(mFileHandle, mPos, SEEK_SET) != 0)
+                break;
+            mFilePos = mPos;
+        }
+
+        unsigned int remaining = aBytes - total;
+        // large reads bypass the buffer
+        if(remaining >= BUFFER_SIZE){
+            unsigned int count = (unsigned int)fread(aDst + total, 1, remaining, mFileHandle);
+            mFilePos += count;
+            mPos += count;
+            total += count;
+            if(count < remaining)
+                break;
+            continue;
+        }
+
+        unsigned int count = (unsigned int)fread(mBuffer, 1, BUFFER_SIZE, mFileHandle);
+        mFilePos += count;
+        mBufferStart = mPos;
+        mBufferLength = count;
+        if(count == 0)
+            break;
+    }
+    if(total < aBytes)
+        mEof = true;
+    return total;
 }
 
 unsigned int DiskFile::length(){
     if(!mFileHandle)
         return 0;
-    unsigned int pos = (unsigned int)ftell(mFileHandle);
-    fseek(mFileHandle, 0, SEEK_END);
-    unsigned int len = (unsigned int)ftell(mFileHandle);
-    fseek(mFileHandle, pos, SEEK_SET);
-    return len;
+    if(mLength < 0){
+        fseek(mFileHandle, 0, SEEK_END);
+        mLength = ftell(mFileHandle);
+        fseek(mFileHandle, mFilePos, SEEK_SET);
+    }
+    return (unsigned int)mLength;
 }
 
 void DiskFile::seek(int aOffset){
-    fseek(mFileHandle, aOffset, SEEK_SET);
+    mPos = (unsigned int)aOffset;
+    mEof = false;
 }
 
 unsigned int DiskFile::pos(){
-    return (unsigned int)ftell(mFileHandle);
+    return mPos;
 }
 
 FILE *DiskFile::getFilePtr(){
@@ -87,20 +139,26 @@ DiskFile::~DiskFile(){
 }
 
 DiskFile::DiskFile(){
-    mFileHandle = 0;
+    init(0);
 }
 
 result DiskFile::open(const char *aFilename){
     if(!aFilename)
         return INVALID_PARAMETER;
-    mFileHandle = fopen(aFilename, "rb");
+    if(mFileHandle)
+        fclose(mFileHandle);
+    FILE *fp = fopen(aFilename, "rb");
+    // reads are buffered here, so a second stdio buffer would only add copies
+    if(fp)
+        setvbuf(fp, NULL, _IONBF, 0);
+    init(fp);
     if(!mFileHandle)
         return FILE_NOT_FOUND;
     return SO_NO_ERROR;
 }
 
 int DiskFile::eof(){
-    return feof(mFileHandle);
+    return mEof;
 }
 
 unsigned int MemoryFile::read(unsigned char *aDst, unsigned int aBytes){

@@ -57,9 +57,19 @@ class File {
     }
 };
 
+// Buffers reads and tracks its own position: stb_vorbis reads byte by byte and seeks often, which is very slow
+// if every ftell/fseek goes to the OS (which happens when stdio doesn't optimize seeks, e.g. inside a JVM on macOS).
 class DiskFile : public File {
    public:
+    enum { BUFFER_SIZE = 4096 };
+
     FILE *mFileHandle;
+    long mLength;
+    // logical position, and the position of the underlying file handle
+    unsigned int mPos, mFilePos;
+    unsigned int mBufferStart, mBufferLength;
+    bool mEof;
+    unsigned char mBuffer[BUFFER_SIZE];
 
     virtual int eof();
     virtual unsigned int read(unsigned char *aDst, unsigned int aBytes);
@@ -71,6 +81,9 @@ class DiskFile : public File {
     DiskFile(FILE *fp);
     result open(const char *aFilename);
     virtual FILE *getFilePtr();
+
+   private:
+    void init(FILE *fp);
 };
 
 class MemoryFile : public File {
