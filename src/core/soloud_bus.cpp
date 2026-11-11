@@ -105,6 +105,7 @@ BusInstance::~BusInstance(){
             s->stopVoice_internal(i);
         }
     }
+    s->stopFadeVoices_internal(0, channel);
 }
 
 Bus::Bus(){

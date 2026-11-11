@@ -313,7 +313,7 @@ int Soloud::findFreeVoice_internal(float priority, int concurrentGroupId, int ma
         if(sameCount >= maxConcurrent){
             // there is a candidate to kick out of the list
             if(bestSameVoice != -1){
-                stopVoice_internal(bestSameVoice);
+                fadeStopVoice_internal(bestSameVoice);
                 return bestSameVoice;
             }
             // cannot play (there was no lower volume candidate)
@@ -321,7 +321,7 @@ int Soloud::findFreeVoice_internal(float priority, int concurrentGroupId, int ma
         }
 
         if(best_voice != -1 && mVoice[best_voice] != NULL){
-            stopVoice_internal(best_voice);
+            fadeStopVoice_internal(best_voice);
         }
 
         if(best_voice + 1 > (signed)mHighestVoice){
@@ -344,7 +344,7 @@ int Soloud::findFreeVoice_internal(float priority, int concurrentGroupId, int ma
                 best_voice = i;
             }
         }
-        stopVoice_internal(best_voice);
+        fadeStopVoice_internal(best_voice);
 
         return best_voice;
     }

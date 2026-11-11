@@ -80,7 +80,7 @@ freely, subject to the following restrictions:
 #endif
 
 // year | month (2 digits) | revision (2 digits)
-#define SOLOUD_VERSION 20260904
+#define SOLOUD_VERSION 20261101
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -98,6 +98,9 @@ freely, subject to the following restrictions:
 // Maximum number of concurrent voices (hard limit is 4095)
 #define VOICE_COUNT 100
 #endif
+
+// Maximum number of stopped voices that can be fading out at once
+#define FADE_VOICE_COUNT 16
 
 // 1)mono, 2)stereo 4)quad 6)5.1 8)7.1
 #define MAX_CHANNELS 8
@@ -274,8 +277,8 @@ class Soloud {
     void stop(handle aVoiceHandle);
     // Stop all voices.
     void stopAll();
-    // Stop all voices that play this sound source
-    void stopAudioSource(AudioSource &aSound);
+    // Stop all voices that play this sound source. If aFade is set, voices are briefly faded out instead of being cut off.
+    void stopAudioSource(AudioSource &aSound, bool aFade = false);
     // Count voices that play this audio source
     int countAudioSource(AudioSource &aSound);
 
@@ -477,6 +480,12 @@ class Soloud {
     handle getHandleFromVoice_internal(unsigned int aVoice) const;
     // Stop voice (not handle).
     void stopVoice_internal(unsigned int aVoice);
+    // Stop voice (not handle), fading it out over the next mixed block instead of cutting it off.
+    void fadeStopVoice_internal(unsigned int aVoice);
+    // Immediately stop fading voices belonging to an audio source ID or bus handle (0 matches nothing).
+    void stopFadeVoices_internal(unsigned int aAudioSourceID, unsigned int aBusHandle);
+    // Mix a single voice into a bus buffer
+    void mixVoice_internal(AudioSourceInstance *aVoice, float *aBuffer, unsigned int aSamplesToRead, unsigned int aBufferSize, float *aScratch, float aSamplerate, unsigned int aChannels, unsigned int aResampler);
     // Set voice (not handle) pan.
     void setVoicePan_internal(unsigned int aVoice, float aPan);
     // Set voice (not handle) relative play speed.
@@ -521,6 +530,10 @@ class Soloud {
     AudioSourceInstance **mResampleDataOwner;
     // Audio voices.
     AudioSourceInstance *mVoice[VOICE_COUNT];
+    // Stopped voices that are being faded out; not addressable by handle.
+    AudioSourceInstance *mFadeVoice[FADE_VOICE_COUNT];
+    // Resample buffers for fading voices, two per voice.
+    AlignedFloatBuffer mFadeResampleBuffer;
     // Resampler for the main bus
     unsigned int mResampler;
     // Output sample rate (not float)

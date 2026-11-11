@@ -22,6 +22,8 @@ freely, subject to the following restrictions:
    distribution.
 */
 
+#include <string.h>
+
 #include "soloud.h"
 
 // Direct voice operations (no mutexes - called from other functions)
@@ -116,6 +118,62 @@ void Soloud::stopVoice_internal(unsigned int aVoice){
         }
 
         delete v;
+    }
+}
+
+void Soloud::fadeStopVoice_internal(unsigned int aVoice){
+    if(aVoice >= VOICE_COUNT)
+        return;
+    SOLOUD_ASSERT(mInsideAudioThreadMutex);
+    AudioSourceInstance *v = mVoice[aVoice];
+    if(!v)
+        return;
+
+    int slot = -1;
+    // voices that have not been mixed yet or are silent can be cut off without a click
+    if(v->mResampleData[0] && mFadeResampleBuffer.mData && !(v->mFlags & (AudioSourceInstance::PAUSED | AudioSourceInstance::INAUDIBLE))){
+        for(int i = 0; i < FADE_VOICE_COUNT; i++){
+            if(mFadeVoice[i] == NULL){
+                slot = i;
+                break;
+            }
+        }
+    }
+
+    if(slot == -1){
+        stopVoice_internal(aVoice);
+        return;
+    }
+
+    mActiveVoiceDirty = true;
+    mVoice[aVoice] = 0;
+
+    // the resample buffers belong to the active voice pool and will be reassigned, so move the data into the fade pool
+    float *data = mFadeResampleBuffer.mData + slot * 2 * SAMPLE_GRANULARITY * MAX_CHANNELS;
+    for(int k = 0; k < 2; k++){
+        memcpy(data + k * SAMPLE_GRANULARITY * MAX_CHANNELS, v->mResampleData[k], sizeof(float) * SAMPLE_GRANULARITY * v->mChannels);
+        v->mResampleData[k] = data + k * SAMPLE_GRANULARITY * MAX_CHANNELS;
+    }
+
+    for(unsigned int i = 0; i < mMaxActiveVoices; i++){
+        if(mResampleDataOwner[i] == v){
+            mResampleDataOwner[i] = NULL;
+        }
+    }
+
+    // panAndExpand ramps from the current volume to this over the next block
+    v->mOverallVolume = 0;
+    mFadeVoice[slot] = v;
+}
+
+void Soloud::stopFadeVoices_internal(unsigned int aAudioSourceID, unsigned int aBusHandle){
+    SOLOUD_ASSERT(mInsideAudioThreadMutex);
+    for(int i = 0; i < FADE_VOICE_COUNT; i++){
+        AudioSourceInstance *v = mFadeVoice[i];
+        if(v && ((aAudioSourceID != 0 && v->mAudioSourceID == aAudioSourceID) || (aBusHandle != 0 && v->mBusHandle == aBusHandle))){
+            mFadeVoice[i] = NULL;
+            delete v;
+        }
     }
 }
 

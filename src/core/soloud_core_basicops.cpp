@@ -141,19 +141,27 @@ result Soloud::seek(handle aVoiceHandle, time aSeconds){
 
 void Soloud::stop(handle aVoiceHandle){
     FOR_ALL_VOICES_PRE
-    stopVoice_internal(ch);
+    fadeStopVoice_internal(ch);
     FOR_ALL_VOICES_POST
 }
 
-void Soloud::stopAudioSource(AudioSource &aSound){
+void Soloud::stopAudioSource(AudioSource &aSound, bool aFade){
     if(aSound.mAudioSourceID){
         lockAudioMutex_internal();
 
         int i;
         for(i = 0; i < (signed)mHighestVoice; i++){
             if(mVoice[i] && mVoice[i]->mAudioSourceID == aSound.mAudioSourceID){
-                stopVoice_internal(i);
+                if(aFade){
+                    fadeStopVoice_internal(i);
+                }else{
+                    stopVoice_internal(i);
+                }
             }
+        }
+        // fading voices may reference source data that is about to be freed
+        if(!aFade){
+            stopFadeVoices_internal(aSound.mAudioSourceID, 0);
         }
         unlockAudioMutex_internal();
     }
@@ -164,6 +172,10 @@ void Soloud::stopAll(){
     lockAudioMutex_internal();
     for(i = 0; i < (signed)mHighestVoice; i++){
         stopVoice_internal(i);
+    }
+    for(i = 0; i < FADE_VOICE_COUNT; i++){
+        delete mFadeVoice[i];
+        mFadeVoice[i] = NULL;
     }
     unlockAudioMutex_internal();
 }
