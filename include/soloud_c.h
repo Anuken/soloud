@@ -159,6 +159,7 @@ int Soloud_seek(Soloud* aSoloud, unsigned int aVoiceHandle, double aSeconds);
 void Soloud_stop(Soloud* aSoloud, unsigned int aVoiceHandle);
 void Soloud_stopAll(Soloud* aSoloud);
 void Soloud_stopAudioSource(Soloud* aSoloud, AudioSource* aSound);
+void Soloud_stopAudioSourceEx(Soloud* aSoloud, AudioSource* aSound, int aFade /* = false */);
 int Soloud_countAudioSource(Soloud* aSoloud, AudioSource* aSound);
 void Soloud_setFilterParameter(Soloud* aSoloud, unsigned int aVoiceHandle, unsigned int aFilterId, unsigned int aAttributeId, float aValue);
 float Soloud_getFilterParameter(Soloud* aSoloud, unsigned int aVoiceHandle, unsigned int aFilterId, unsigned int aAttributeId);

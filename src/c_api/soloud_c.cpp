@@ -201,6 +201,11 @@ void Soloud_stopAudioSource(void *aClassPtr, AudioSource *aSound){
     cl->stopAudioSource(*aSound);
 }
 
+void Soloud_stopAudioSourceEx(void *aClassPtr, AudioSource *aSound, int aFade){
+    Soloud *cl = (Soloud *)aClassPtr;
+    cl->stopAudioSource(*aSound, !!aFade);
+}
+
 int Soloud_countAudioSource(void *aClassPtr, AudioSource *aSound){
     Soloud *cl = (Soloud *)aClassPtr;
     return cl->countAudioSource(*aSound);
