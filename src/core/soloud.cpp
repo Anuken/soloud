@@ -1860,12 +1860,19 @@ int voicecmp(const void *ap, const void *bp){
     unsigned int a = *(unsigned int *)ap;
     unsigned int b = *(unsigned int *)bp;
 
-    // Test a>b
-    if((sortGlobal->mVoice[a]->mFlags & AudioSourceInstance::PROTECTED) && !(sortGlobal->mVoice[b]->mFlags & AudioSourceInstance::PROTECTED))
-        return true;
-    if((sortGlobal->mVoice[b]->mFlags & AudioSourceInstance::PROTECTED) && !(sortGlobal->mVoice[a]->mFlags & AudioSourceInstance::PROTECTED))
-        return false;
-    return sortGlobal->mVoice[a]->mOverallVolume > sortGlobal->mVoice[b]->mOverallVolume;
+    // qsort comparator: negative = a sorts first. Protected voices first, then loudest first,
+    // since only the first mMaxActiveVoices entries are kept.
+    bool pa = (sortGlobal->mVoice[a]->mFlags & AudioSourceInstance::PROTECTED) != 0;
+    bool pb = (sortGlobal->mVoice[b]->mFlags & AudioSourceInstance::PROTECTED) != 0;
+    if(pa != pb)
+        return pa ? -1 : 1;
+    float va = sortGlobal->mVoice[a]->mOverallVolume;
+    float vb = sortGlobal->mVoice[b]->mOverallVolume;
+    if(va > vb)
+        return -1;
+    if(va < vb)
+        return 1;
+    return 0;
 };
 
 void Soloud::calcActiveVoices_internal(){
